@@ -1,0 +1,2403 @@
+<?php
+/**
+ * meli_model
+ */
+
+/**
+   * @version 1.0.0
+   */
+    const VERSION  = "1.0.0";
+
+
+class Meli
+{
+    public function __construct()
+    {
+      
+        require_once("model/melicurl_model.php");
+        require_once("model/analysis_model.php");
+        require_once("model/local_model.php");
+        require_once("model/post_model.php");
+
+    }
+    
+    protected static $GET_CHILDREN_URL = "https://api.mercadolibre.com/categories/";
+    protected static $GET_SELLER_ARTICLES   = "/search?nickname=";
+    //Pendiente quitar dependendencia de país y poner el pais como variable
+    protected static $GET_ARTICLES_URL = "https://api.mercadolibre.com/sites/MLM/search?category=";
+    protected static $GET_FULL_ARTICLE_URL = "https://api.mercadolibre.com/items/";
+    protected static $SAVE_ARTICLES_DIR_Computacion = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Computacion/";
+    protected static $SAVE_ARTICLES_DIR_Inactive_Computacion = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Inactive/Computacion/";
+    protected static $SAVE_ARTICLES_DIR_Cajas_de_Dirección = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Accesorios para Vehículos/Refacciones Autos y Camionetas/Suspensión y Dirección/Cajas de Dirección/";
+     protected static $SAVE_ARTICLES_DIR_Suspensión_y_Dirección = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Accesorios para Vehículos/Refacciones Autos y Camionetas/Suspensión y Dirección/";
+    protected static $SAVE_ARTICLES_DIR_Ropa_Bolsas__Calzado = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Ropa_Bolsas__Calzado/";
+    protected static $SAVE_ARTICLES_PRUEBA_EXPANSION = "wamp64/www/cursoPHP/mercadolibre_comparador/data/prueba_expansion/Suspensión y Dirección/";
+    protected static $SAVE_ARTICLES = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Modeloprediccion/";
+    protected static $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+    //Pendiente Demasiadas variables ->modificar poner en variable de funcion
+    //Pendiente Arreglar todo el modelo de salvado no es lo suficientemente claro
+    //Pendiente pensar si poner en cada función que tipo de valor devuelve esto ayuda mucho a un tercero a entender el codigo
+
+    
+
+    public function get_children($father_category)
+    {
+        //look at the api of mercadolibre for the characteristics of the incoming parent category.
+
+        $url = self::$GET_CHILDREN_URL . $father_category;
+
+        //This method looks for the json of the url and turns it into an object, $ assoc = true passes it from object to associative array.
+       
+        $json = curl::file_get_contents_curl($url, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+       
+        $obj = json_decode($json, $assoc = true);
+
+        $count_children = count($obj["children_categories"]);
+        
+        for ($i=0; $i < $count_children; $i++) {
+            $children_categories[$i] = $obj["children_categories"][$i]["id"];
+        }
+        
+        return $children_categories;
+    }
+
+    public function get_articles($category)
+    {
+        // only for MLM (MEXICO)
+        //This first article json format is short (little info).
+        //This call adjusts limit, offset and access_token to call all items in the category up to 10,000 items max.
+
+        $url = self::$GET_ARTICLES_URL . $category;
+
+        $json = curl::file_get_contents_curl($url, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+
+        $obj = json_decode($json, $assoc = true);
+
+        return $obj;
+    }
+
+    public function get_country_articles($category, $country_id)
+    {
+
+        $url = "https://api.mercadolibre.com/sites/" . $country_id . "/search?category=" . $category;
+
+        $json = curl::file_get_contents_curl($url, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+
+        $obj = json_decode($json, $assoc = true);
+
+        return $obj;
+    }
+
+    public function get_articles_array($category_array){
+
+      foreach ($category_array as $key) {
+            $url_array[] = self::$GET_ARTICLES_URL . $key;
+        }
+
+        //var_dump($url_array);
+
+        $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+        
+        foreach ($json_array as $key => $value) {
+            $obj[$key] = json_decode($json_array[$key], $assoc = true);
+        }
+
+        return $obj;
+    }
+
+    public function get_real_articles_array_country($category_array, $country_id){
+      //this function return articles_array no just the search of all.
+
+      $search_all = $this -> get_articles_array_country($category_array, $country_id);
+
+      $articles_array_country = [];
+      foreach ($search_all as $number_packages => $obj) {
+        foreach ($search_all[$number_packages]["results"] as $key => $value) {
+
+          $articles_array_country[] = $search_all[$number_packages]["results"][$key]["id"];                  
+        } 
+      }
+
+      return $articles_array_country;
+    }
+
+    public function get_articles_array_country($category_array, $country_id){
+
+      // Pendiente cambiar el nombre get_articles_array_country por search_articles_array_country ya que devuelve la busqueda de todos los items, pero no los items en sí.
+      //1- cambiar todos las llamadas y el nombre de esta funcion.
+      //2- modificar esta funcion para que devuelva los items en sí
+      foreach ($category_array as $key) {
+            $url_array[] = "https://api.mercadolibre.com/sites/" . $country_id . "/search?category=" . $key;
+        }
+
+        //var_dump($url_array);
+
+        $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+        
+        foreach ($json_array as $key => $value) {
+            $obj[$key] = json_decode($json_array[$key], $assoc = true);
+        }
+
+        return $obj;
+    }
+
+
+    public function get_full_article($item_id)
+    {
+        //This second json format of article is long (a lot of "adequate" info)
+
+        $url = self::$GET_FULL_ARTICLE_URL . $item_id;
+
+        $json = curl::file_get_contents_curl($url, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+
+        $obj = json_decode($json, $assoc = true);
+
+        return $obj;
+    }
+
+    public function get_full_article_array($item_ids_array)
+    {
+        //This format extracts elements in parallel count = get_articles_total -> $ limit.
+              
+        foreach ($item_ids_array as $key) {
+            $url_array[] = self::$GET_FULL_ARTICLE_URL . $key;
+        }
+
+        $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+        
+        foreach ($json_array as $key => $value) {
+            $obj[$key] = json_decode($json_array[$key], $assoc = true);
+        }
+
+        return $obj;
+    }
+
+    public function get_item_time_active_array($time_created_array, $time_parameter, $healt_array, $url_azure_cloud){
+
+      var_dump($time_created_array);
+      var_dump($healt_array);
+
+      foreach ($time_created_array as $key) {
+          $url_array[] = $url_azure_cloud . "&time=" . $key . "&time_parameter=" . $time_parameter;
+      }
+
+      $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+      
+      foreach ($json_array as $key => $value) {
+          $obj[$key] = json_decode($json_array[$key], $assoc = true);
+          $obj[$key] = floor($obj[$key] * $healt_array[$key]);
+      }
+
+      var_dump("get_item_time_active_array");
+      var_dump($obj);
+
+      return $obj;
+
+    }
+
+    public function get_sold_quantity_scraping_array($permalinks_array, $url_azure_cloud){
+
+      foreach ($permalinks_array as $key) {
+          $url_array[] = $url_azure_cloud . "&permalink=" . $key;
+      }
+
+      $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));    
+      foreach ($json_array as $key => $value) {
+          $obj[$key] = json_decode($json_array[$key], $assoc = true);
+      }
+
+      return $obj;  
+    }
+
+    public function get_sold_quantity_array($object_array, $url_azure_cloud){
+
+      //pending take difference between items that are greater and less than 4 sales
+      $count_scraping_calls = 0;
+
+      foreach ($object_array as $key => $value) {
+        if ($object_array[$key]["sold_quantity"] < 5) {
+          $sold_quantity_array[$key] = $object_array[$key]["sold_quantity"];
+        }
+        else {
+          
+          $save_position[$count_scraping_calls] = $key;
+          $permalinks_array[$count_scraping_calls] = $object_array[$key]["permalink"];
+          $count_scraping_calls = $count_scraping_calls + 1;
+
+          $sold_quantity_array[$key] = $object_array[$key]["sold_quantity"];
+        }
+      }
+      var_dump("sold_quantity_array");
+      var_dump($sold_quantity_array);
+
+      if ($permalinks_array != null) {
+        
+        $sold_quantity_scraping_array = $this -> get_sold_quantity_scraping_array($permalinks_array, $url_azure_cloud);
+
+        var_dump($sold_quantity_scraping_array);
+
+        foreach ($sold_quantity_scraping_array as $key => $value) {
+
+          if ($sold_quantity_scraping_array[$key] != null) {          
+           $step = $save_position[$key]; 
+           $sold_quantity_array[$step] = $sold_quantity_scraping_array[$key];
+          }
+        }
+      } 
+
+      return $sold_quantity_array;
+    }
+
+    public function seller_object_array($object_array){
+
+      foreach ($object_array as $key => $value) {      
+        $seller_id_array[$key] = $object_array[$key]['seller_id'];
+      }
+
+       
+      $seller_object = analysis::get_seller($seller_id_array);
+
+      return $seller_object;
+    }
+
+    public function vendor_reputation_array($object_array, $want_integer = true){
+
+     $seller_object = $this -> seller_object_array($object_array);
+
+     foreach ($seller_object as $key => $value) {
+      $reputation_array[$key] = $seller_object[$key]['seller_reputation']['level_id'];
+
+      if($want_integer == true){
+
+        $portions = explode("_", $reputation_array[$key]);
+        $reputation_array[$key] = intval($portions[0]);
+      }
+     }
+
+     return $reputation_array;
+    }
+
+    //predict market functions
+
+    public function get_items_features($object_array, $features_to_obtain, $country_id = "MLM", $coin = "MXN"){
+
+      //pendiente completar $features_to_obtain como array de entrada
+      //always do
+        foreach ($object_array as $key => $value) {
+          $item_ids_array[$key] = $object_array[$key]["id"];
+        }
+        
+      //title
+        foreach ($object_array as $key => $value) {
+          $get_items_match_array[$key]["title"] = $object_array[$key]["title"];
+        }
+
+      //site_id
+        foreach ($object_array as $key => $value) {
+          $get_items_match_array[$key]["site_id"] = $object_array[$key]["site_id"];
+        }
+
+      //price
+
+        $name_and_coin = array(
+            "MLA" => "ARS", // Argentina 
+            "MLB" => "BRL", // Brasil
+            "MCO" => "COP", // Colombia
+            "MCR" => "CRC", // Costa Rica
+            "MEC" => "USD", // Ecuador
+            "MLC" => "CLP", // Chile
+            "MLM" => "MXN", // Mexico
+            "MLU" => "UYU", // Uruguay
+            //"MLV" => "", // Venezuela need another api
+            "MPA" => "PAB", // Panama
+            "MPE" => "PEN", // Peru
+            "MPT" => "EUR", // Prtugal
+            "MRD" => "DOP"  // Dominicana
+        );
+
+        // $coin is the price reference, equal to $name_and_coin[$name]
+
+
+        $currency_exchange_array = analysis::get_today_currency_exchange($coin, $name_and_coin);
+        var_dump("currency_exchange_array");
+        var_dump($currency_exchange_array);
+
+        foreach ($object_array as $key => $value) {
+
+           $get_items_match_array[$key]["price"] = round($object_array[$key]["price"] * $currency_exchange_array[$country_id], 2);
+
+           var_dump("testing price");
+           var_dump($country_id);
+           var_dump($object_array[$key]["price"]);
+           var_dump($currency_exchange_array[$country_id]);
+           var_dump($get_items_match_array[$key]["price"]);
+        }
+
+      //reputation vendor
+        $reputation_vendor_array = $this -> vendor_reputation_array($object_array, $want_integer = true);
+        foreach ($object_array as $key => $value) {
+          $get_items_match_array[$key]["reputation_vendor"] = $reputation_vendor_array[$key];
+        }
+
+      //reputation vendor
+        $seller_object = $this -> seller_object_array($object_array);
+        foreach ($object_array as $key => $value) {
+          $get_items_match_array[$key]["vendor_sales_completed"] = $seller_object[$key]["seller_reputation"]["transactions"]["completed"];
+        }
+
+      //logistic_type
+        foreach ($object_array as $key => $value) {
+          $get_items_match_array[$key]["logistic_type"] = $object_array[$key]["shipping"]["logistic_type"];
+        }
+      
+      //ranking
+        $ranking_item_array = $this -> get_ranking_item_array($object_array, $limit = 50, $country_id);
+        foreach ($object_array as $key => $value) {
+
+          //Pendiente desactivar esta caracteristica y ver porque salen esos resultados null, 18 de enero no se entiende el por que salen null se asume error de MELI
+          if ($ranking_item_array[$key] == null) {
+            $ranking_item_array[$key] = ""; 
+          }
+          $get_items_match_array[$key]["ranking"] = $ranking_item_array[$key];
+        }
+
+      //conversion
+      
+          //sold_quantity
+            $sold_quantity_array = $this -> get_sold_quantity_array($object_array, $url_azure_cloud = "https://tablesoldquantity.azurewebsites.net/api/ScrapingHTTP?code=9TtiE9aIhq1apfSMbolmwZZgXOcyBXYFos0Zdn1zga2v/gaddrDBqw==");
+            var_dump('sold_quantity_array');
+            var_dump($sold_quantity_array);
+
+          //views
+            $views_array = analysis::total_item_visions_array($item_ids_array);
+            var_dump('views_array');
+            var_dump($views_array);
+
+        foreach ($object_array as $key => $value) {
+        $var1 = $sold_quantity_array[$key];
+        $id = $object_array[$key]["id"];
+        $var2 = $views_array[$key][$id];
+        $get_items_match_array[$key]["conversion"] = $var1/$var2;
+
+        //Pendiente pasar a funcion covertir a 0 float
+        if ((is_nan($get_items_match_array[$key]["conversion"])) || (is_infinite($get_items_match_array[$key]["conversion"])) || ($get_items_match_array[$key]["conversion"] == 0)) {
+          $get_items_match_array[$key]["conversion"] = 0;
+          $get_items_match_array[$key]["conversion"] = floatval($get_items_match_array[$key]["conversion"]);
+        }
+        var_dump('conversion');
+        var_dump($get_items_match_array[$key]["conversion"]);
+        }  
+
+      //condition
+        foreach ($object_array as $key => $value) {
+          $get_items_match_array[$key]["condition"] = $object_array[$key]["condition"];
+        }
+
+      //listing_type_id
+        foreach ($object_array as $key => $value) {
+          $get_items_match_array[$key]["listing_type_id"] = $object_array[$key]["listing_type_id"];
+        }
+
+      //sold_quantity_for_days
+
+        // item_days_active
+        $result = $this -> get_full_article_array($item_ids_array);
+
+        foreach ($result as $key => $value) {
+          $time_created_array[$key] = $result[$key]["date_created"];
+          $healt_array[$key] = $result[$key]["health"];
+        }
+
+        $url_azure_cloud_time_created = "https://predictmarket.azurewebsites.net/api/itemTimecreated?code=lDYeIva/V1NnW/M8lkBeiGnpZ/OyOp53hSa9WxY5WMLGnIlpIabH1w==";
+
+        $item_time_active_array = $this -> get_item_time_active_array($time_created_array, "days", $healt_array, $url_azure_cloud_time_created);
+
+        //sold_quantity
+        if ($sold_quantity_array == null) {
+          $sold_quantity_array = $this -> get_sold_quantity_array($object_array, $url_azure_cloud = "https://tablesoldquantity.azurewebsites.net/api/ScrapingHTTP?code=9TtiE9aIhq1apfSMbolmwZZgXOcyBXYFos0Zdn1zga2v/gaddrDBqw==");
+          var_dump('sold_quantity_array');
+          var_dump($sold_quantity_array);
+        }
+
+      foreach ($object_array as $key => $value) {
+        $var1 = $sold_quantity_array[$key];
+        $var2 = $item_time_active_array[$key];
+        $get_items_match_array[$key]["sold_quantity_for_days"] = $var1/$var2;
+
+      //Pendiente pasar a funcion covertir a 0 float
+        if ((is_nan($get_items_match_array[$key]["sold_quantity_for_days"])) || (is_infinite($get_items_match_array[$key]["sold_quantity_for_days"])) || ($get_items_match_array[$key]["sold_quantity_for_days"] == 0)) {
+          $get_items_match_array[$key]["sold_quantity_for_days"] = 0;
+          $get_items_match_array[$key]["sold_quantity_for_days"] = floatval($get_items_match_array[$key]["sold_quantity_for_days"]);
+        }
+        var_dump("sold_quantity_for_days");
+        var_dump($get_items_match_array[$key]["sold_quantity_for_days"]);
+      } 
+
+      // more than 1 year and half in market boolian 
+
+        if($item_time_active_array == null){
+          $item_time_active_array = $this -> get_item_time_active_array($time_created_array, "days", $healt_array, $url_azure_cloud_time_created);
+        }
+
+        var_dump("active time products in days");
+        var_dump($item_time_active_array);
+
+        foreach ($object_array as $key => $value) {
+
+          if ($item_time_active_array[$key] != null) {
+            if($item_time_active_array[$key] > 456){
+              $get_items_match_array[$key]["more_than_1.25year?"] = true;
+            }
+            else{ $get_items_match_array[$key]["more_than_1.25year?"] = false;}
+          }       
+        }
+      
+      //weeks visits (52 x)
+
+        $items_days_visits_array = analysis::visits_item_ndays($item_ids_array, 365);
+       
+        $items_52_week_visits_array = $this -> get_week_visits($item_ids_array, $items_days_visits_array, 52);
+             
+        foreach ($item_ids_array as $key => $item_id) {
+
+          for ($j=1;  $j <= 52; $j++){
+            $week = "last_" . $j . "week";
+            $get_items_match_array[$key][$week] = $items_52_week_visits_array[$item_id][$week];
+          }          
+        }
+      
+      //return
+
+      return $get_items_match_array; 
+    }
+
+    public function get_week_visits($item_ids_array, $items_days_visits_array, $number_of_weeks){
+
+      //From the beginning of the day of the start of the calculation, e.g. starts the wednesday calculation 6 pm the first week, would be from Wednesday 00:00 am to Wednesday 00:00 am from Wednesday last week
+      //eg. if ($number_of_weeks = 52) the algorithm won't consider $items_days_visits_array[0], because 52 weeks is not exactly one year.
+
+      foreach ($item_ids_array as $key => $item_id) {
+
+        $total_days = count($items_days_visits_array[$item_id]);
+        $test_count = 0;
+        for ($i = 0;  $i < $number_of_weeks; $i++)
+        {
+          $start_day = ($total_days - 1) - (7 * $i);
+          $ends_day = ($total_days - 8) - (7 * $i);
+
+          //var_dump("start_day and ends_day");
+          //var_dump($start_day);
+          //var_dump($ends_day);
+
+          $week = "last_" . ($i + 1) . "week";
+          $add_days_of_the_week = 0;
+          
+          for ($j = $start_day;  $j > $ends_day; $j--){
+
+            //var_dump("days");
+            //var_dump($j);
+
+            $add_days_of_the_week = $add_days_of_the_week + $items_days_visits_array[$item_id][$j][1];
+            //var_dump($add_days_of_the_week);
+          }
+          //var_dump("add_days_of_the_week" . $week);
+          //var_dump($add_days_of_the_week);
+
+          $test_count = $test_count + $add_days_of_the_week;
+
+          $items_52_week_visits_array[$item_id][$week] = $add_days_of_the_week;
+        }
+        //var_dump("test total visits");
+        //var_dump($test_count);
+      }
+
+      return $items_52_week_visits_array;
+    }
+
+    public function get_conversion_array($object_array, $url_azure_cloud){
+      //sold_quantity
+      $sold_quantity_array = $this -> get_sold_quantity_array($object_array, $url_azure_cloud);
+      var_dump($sold_quantity_array);
+
+      foreach ($object_array as $key => $value) {
+        $item_id_array[$key] = $object_array[$key]["id"];
+      }
+      //views
+      $views_array = analysis::total_item_visions_array($item_id_array);
+      var_dump($views_array);
+      // item_days_active
+      foreach ($object_array as $key => $value) {
+        $item_ids_array[$key] = $object_array[$key]["id"];
+      }
+
+      $result = $this -> get_full_article_array($item_ids_array);
+
+      foreach ($result as $key => $value) {
+        $time_created_array[$key] = $result[$key]["date_created"];
+        $healt_array[$key] = $result[$key]["health"];
+      }
+
+      $url_azure_cloud_time_created = "https://predictmarket.azurewebsites.net/api/itemTimecreated?code=lDYeIva/V1NnW/M8lkBeiGnpZ/OyOp53hSa9WxY5WMLGnIlpIabH1w==";
+
+      $item_time_active_array = $this -> get_item_time_active_array($time_created_array, "days", $healt_array, $url_azure_cloud_time_created);
+
+      foreach ($object_array as $key => $value) {
+        $var1 = $sold_quantity_array[$key];
+        $id = $object_array[$key]["id"];
+        $var2 = $views_array[$key][$id];
+        $var3 = $var1/$var2;
+        $conversion[$key] = $var3;
+        var_dump($conversion[$key]);
+      }
+
+      foreach ($object_array as $key => $value) {
+
+        $id = $object_array[$key]["id"];
+
+        $conversion_parameters[$key]["0"] = $object_array[$key]["title"];
+        $conversion_parameters[$key]["1"] = $sold_quantity_array[$key];
+        $conversion_parameters[$key]["2"] = $views_array[$key][$id];
+        $conversion_parameters[$key]["3"] = $item_time_active_array[$key];
+        $conversion_parameters[$key]["4"] = $conversion[$key];
+
+
+        echo "titulo : " . $conversion_parameters[$key]["0"] . "<br>";
+        echo "vendidos : " . $conversion_parameters[$key]["1"] . "<br>";
+        echo "visitas : " . $conversion_parameters[$key]["2"] . "<br>";
+        echo "tiempo_activo : " . $conversion_parameters[$key]["3"] . " dias<br>";
+        echo "conversion : " . $conversion_parameters[$key]["4"] . "<br><br><br>";
+      }
+
+      return $conversion_parameters;
+    }
+
+    public function get_seller_articles($seller_id_or_nickname = array(), $plus, $country = 'MLM'){
+
+      $nickname = analysis::get_nickname($seller_id_or_nickname); 
+
+      $nickname_search = analysis::separator_search($nickname);
+
+       $url = "https://api.mercadolibre.com/sites/" . $country . self::$GET_SELLER_ARTICLES . $nickname_search . $plus;
+
+       $json = curl::file_get_contents_curl($url, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+
+       $obj = json_decode($json, $assoc = true);
+
+       return $obj;
+    }
+
+    /*
+      $options_work_and_save [work_and_save, get_articles_total]
+        get_inactive = true //Take files that are inactive
+        get_conversion = true //Answer an array with the conversion
+            { // ADD to array in order to specify whitch sort you want.
+              "more_conversion" => true
+              "more_views" => true
+              "more_solds" => true  
+            }
+        dont_save = true // It does not save the results on the computer, it only processes them
+        dir_to_save = "string" // You need to enter a local address in the form of a string, force address to save 
+
+    */
+
+    /*
+      $options_work[get_articles_total]
+        get_expansion => true // Perform an expansive method to exceed 10k with an average effectiveness of increasing the amount of items by 40%.
+        dont_pass_+1000 = true // It return null if there is more than 1000 items in $category input      
+    */ 
+
+    public function get_seller_articles_total($seller_id_or_nickname = array(), $plus, $country = 'MLM', $options_work_and_save, $category_offset = null){
+
+      $start_time_get_seller_articles_total = microtime(true);
+
+      $obj = $this->get_seller_articles($seller_id_or_nickname, $plus, $country);
+
+      $total_articles = $obj['paging']['total'];
+      var_dump(" This seller has a total articles: " .  $total_articles);
+
+      $nickname = analysis::get_nickname($seller_id_or_nickname);
+
+      $nickname_search = analysis::separator_search($nickname);
+
+      $available_filters = $obj['available_filters'];
+
+      $category_available_filters = analysis::available_filters($available_filters, $option = array("category" => true));
+
+      foreach ($category_available_filters['values'] as $key => $value) {
+
+        if ($category_offset != null && $category_available_filters['values'][$key]['id'] != $category_offset) {
+          var_dump("category: " . $category_available_filters['values'][$key]['id'] . " skipped");
+          continue;
+        }
+
+        //Pendiente valorar adicionar a la primera variable de get_articles_total una variable $plus para posibles filtros
+
+        /* Here you can have two variants to save the information.*/
+        // 1 - save a single json with all the items by category.
+        // 2 - save for each category many json each one with an item.
+
+        // selecting option number 1
+        /*
+        $this -> get_articles_total($category . "&nickname=" . $nickname_search, 50, $options_work_and_save = array("get_conversion" => true, "dir_to_save" => $dir_to_save, "more_solds" => true));
+        */
+        // selecting option number 2
+        /*
+        $this -> get_articles_total($category . "&nickname=" . $nickname_search, $limit = 50, $options_work_and_save = array("dir_to_save" => $dir_to_save), $options_work = null);
+        */
+
+        $category =  $category_available_filters['values'][$key]['id'];
+
+        $this -> get_articles_total($category . "&nickname=" . $nickname_search, $limit = 50, $options_work_and_save);
+
+        $this -> save_error($save = false);// $save=false It is equivalent to working errors
+
+      }
+
+      $end_time_get_seller_articles_total = microtime(true);
+      echo "<br> Rounded runtime : get_seller_articles_total -> " . round($end_time_get_seller_articles_total - $start_time_get_seller_articles_total, 4) . " seconds";
+      echo "<br>download speed : " . round($total_articles/($end_time_get_seller_articles_total - $start_time_get_seller_articles_total), 4) . " art/seconds";
+    }
+        
+    public function get_articles_total($category, $limit = 50, $options_work_and_save, $options_work = null)
+    {
+        $start_time = microtime(true);
+        
+        $obj = $this->get_articles($category);
+       
+        $total_articles = $obj["paging"]["total"];
+        var_dump($category . " It has a total of articles: " .  $total_articles);
+
+        var_dump($category . "&offset=0&limit=50"); //Its just for information of starting
+
+        if ($total_articles > 1000) {
+          
+            if($options_work['dont_pass_+1000'] == true){
+              return null;
+            }
+            else{
+              $save_access_token = "&access_token=" . analysis::access_token();
+              $access_token = null;
+              $save_token_items = $total_articles;
+              $total_articles = 1000;
+              $pass_for_token = true;
+              $plus_token = 0;
+            }          
+        } else {
+            $access_token = null;
+            $pass_for_token = false;
+            $plus_token = 0;
+        }
+
+
+        token_process:   // later called to cycle for total_articles > 1000 using access_token.
+
+       for ($j=1;  $j <= ceil($total_articles / $limit); $j++) {
+           $i=0;
+           
+           while ($i < $limit) {
+               if ($obj["results"][$i] == null) {
+                   if ($j == ceil($total_articles / $limit) && $i == $total_articles % $limit) {
+                       var_dump("last value recognition works");
+                       goto offset_process;  // It is not a calling error, but the elements are over.
+                   } else {
+
+                       $this -> save_error( $save = true, $category_offset);
+                      
+                       echo "Marked error and moved to save_error";
+
+                       break ;
+                   }
+               }
+               $article = $obj["results"][$i];
+               $item_id = array_values($article);
+
+               //var_dump($i + 1 + ($j * $limit) - $limit + $plus_token);
+               //var_dump($item_id[0]);
+
+               $item_ids_array[$i] = $item_id[0];
+              
+               $i++;
+           }
+
+           $step_offset = $j * $limit + $plus_token;
+           if ($step_offset>10000) {
+               echo "more than 10000 elements jump";
+               goto end_time; // Go to the time count, which is the end of the function
+           } //Api impossible search greater than 10k
+
+           $category_offset = $category . "&offset=" . $step_offset . "&limit=" . $limit . $access_token;
+           var_dump($category_offset);
+
+           /* Expansion test to exceed 10000 item limit */
+
+           if($options_work['get_expansion'] == true){
+           
+             $start_time = microtime(true);
+
+             $obj =  $this->get_articles_expansion($category_offset, $expansion_coefficient = 5);
+
+             $end_time = microtime(true);
+                static $quantity_expansion_cycle_articles = 0; 
+             echo "save_expansion_count : " . $this->save_expansion_count($show_count = true) . "<br>";
+
+             $quantity_expansion_cycle_articles = $this->save_expansion_count($show_count = true) - $quantity_expansion_cycle_articles;
+             var_dump("quantity_expansion_cycle_articles : " . $quantity_expansion_cycle_articles);
+             echo "<br> expansive method speed : " . round($quantity_expansion_cycle_articles/($end_time - $start_time), 4) . " art/seconds";
+             $quantity_expansion_cycle_articles = $this->save_expansion_count($show_count = true);
+           }
+
+           /* Method without expansion "default"*/
+
+           else{ $obj = $this->get_articles($category_offset);}
+
+           // End of the expansion
+
+           offset_process: // goto jump
+
+           $this -> work_and_save($category, $item_ids_array, self::$SAVE_ARTICLES, $options_work_and_save);
+
+           usleep(50000); // rest time for api so as not to overload it
+       } 
+
+        echo "Token pass is: " . $converted_res = ($pass_for_token) ? 'true' : 'false';
+
+        if ($pass_for_token == true) {
+            $plus_token = 1000;
+            $total_articles = $save_token_items - $plus_token;
+            $access_token = $save_access_token;
+            //$limit=10;  //The method works fine at limit = 50
+
+            $category_offset = $category . "&offset=" . $plus_token . "&limit=" . $limit . $access_token;
+            
+            $obj = $this->get_articles($category_offset);
+                     
+            $pass_for_token = false;
+
+            goto token_process;
+        } else {
+
+          end_time: // goto when it exceeds 10k.
+           $end_time = microtime(true);
+            echo "<br> Rounded runtime: get_articles_total ->" . round($end_time - $start_time, 4) . " seconds";
+           echo "<br>download speed : " . round(($i + 1 + ($j * $limit) - $limit + $plus_token + $this->save_expansion_count($show_count = true))/($end_time - $start_time), 4) . " art/seconds";
+        }
+    }
+
+    //get_ranking_item
+
+    public function get_ranking_item_array($object_array, $limit = 50, $country_id){
+
+      //Pendiente problema con soluciones de ranking que son null en vez de '' (string vacio)      
+      //Pick categories.
+
+      foreach ($object_array as $key => $value) {
+          $categorys_existing[$key] = $object_array[$key]["category_id"];      
+      }
+
+      $categorys_existing = array_unique($categorys_existing); //Remove duplicate values ​​from an array
+
+      // form $item_id_array for every category existing
+
+      foreach ($object_array as $item => $value_item) {
+        foreach ($categorys_existing as $key => $value_category){
+          if ($object_array[$item]["category_id"] == $categorys_existing[$key]) {
+            $array_category_items[$key][$item] = $object_array[$item]["id"];
+          }
+        }
+      }
+
+      // send all item_id_array to get_ranking_item
+      $ranking_array = [];
+      foreach ($categorys_existing as $key => $value_category) {
+        var_dump("array_category_items entrada");
+        var_dump($array_category_items[$key]);
+        var_dump("categorys_existing entrada");
+        var_dump($categorys_existing[$key]);
+        $obj = $this -> get_ranking_item($array_category_items[$key], $categorys_existing[$key], $limit = 50, $country_id);
+        //$ranking_array = array_merge($ranking_array, $obj);
+        $ranking_array = $ranking_array + $obj;
+        var_dump("ranking_array");
+        var_dump($ranking_array);
+      }
+
+      ksort($ranking_array);
+      var_dump("ksort");
+      var_dump($ranking_array); 
+
+      return $ranking_array;
+    }
+ 
+    public function get_ranking_item($item_id_array, $category_id, $limit = 50, $country_id)
+    {
+        $start_time = microtime(true);
+
+        //search total_articles in input category 
+
+        $obj = $this->get_country_articles($category_id, $country_id);
+       
+        $total_articles = $obj["paging"]["total"];
+
+        if ($total_articles <= 1000) {
+          
+          $ranking_position = $this -> get_ranking_item_less1000($item_id_array, $category_id, $total_articles, $limit = 50, $country_id);
+          return $ranking_position;
+        }
+        else {
+
+          //first go through the first 1000
+          $ranking_position_less1000 = $this -> get_ranking_item_less1000($item_id_array, $category_id, 1000, $limit = 50, $country_id, $option_big_1000 = true);
+
+          $ranking_position = $ranking_position_less1000["know"];
+
+          //Pendiente crear if para $ranking_position_less1000["know"] vacio que me quite los warning cuando no hay elementos por debajo de 1000 en el ranking
+          //var_dump("items less than 1000 inside a big category (bigger 1000)");
+          //var_dump($ranking_position);
+
+          //subtract item_array and item_array < or = 1000
+          $item_array_to_search_bigger1000 = [];
+          foreach ($item_id_array as $key_undone => $value) {
+            foreach ($ranking_position as $key_done => $value) {
+              if($key_undone == $key_done) // 
+              {
+                continue 2;               
+              }
+            }
+
+            $item_array_to_search_bigger1000[$key_undone] = $item_id_array[$key_undone];       
+          }
+
+          var_dump("test subtract item arrays");
+          var_dump($item_array_to_search_bigger1000);
+
+          $item_groups = $this -> get_ranking_item_groups($total_articles, $category_id,  $offset_group = 1000, $country_id);
+
+          var_dump("get_ranking_item_groups");
+          var_dump($item_groups);
+          
+          $total_known_offset = 0;
+          $token_negative_offset = false;
+          foreach ($item_groups["quantity_array"] as $key => $value) {
+
+            //work with with big categories more than 1000 items in a filter price (499.9-500)
+            if($item_groups["quantity_array"][$key] > 1000){
+              $token_negative_offset = true;
+              continue;
+            }
+                  
+            for ($j=1;  $j <= ceil($item_groups["quantity_array"][$key] / $limit); $j++)
+            {
+              if ($j == ceil($item_groups["quantity_array"][$key] / $limit)) {
+                $last_limit = $item_groups["quantity_array"][$key] % $limit;
+
+                $category_array[] = $category_id . "&limit=" . $last_limit . "&offset=" . ($j-1)*50 . "&price=" . $item_groups['min_max_price'][$key]["min"] . "-" . $item_groups['min_max_price'][$key]["max"];
+              }
+              else{
+                $category_array[] = $category_id . "&limit=" . $limit . "&offset=" . ($j-1)*50 . "&price=" . $item_groups['min_max_price'][$key]["min"] . "-" . $item_groups['min_max_price'][$key]["max"]; 
+              }              
+            }
+
+            //var_dump("categories");
+            //var_dump($category_array);
+
+            $total_items_category = $this -> get_real_articles_array_country($category_array, $country_id);
+
+            //var_dump("total_items_category");
+            //var_dump(count($total_items_category));
+            //var_dump($total_items_category);
+
+            //var_dump("all ranking_position_less1000");
+            //ar_dump(count($ranking_position_less1000["all"]));
+            //var_dump($ranking_position_less1000["all"]);           
+
+            $item_know_ranking = array_intersect($total_items_category, $ranking_position_less1000["all"]);
+
+            //var_dump("item_know_ranking");
+            //var_dump("count");
+            //var_dump(count($item_know_ranking));
+            //var_dump("end in:");
+            //end($item_know_ranking);
+            //var_dump(key( $item_know_ranking ));
+            //var_dump($item_know_ranking);
+
+            unset($category_array);
+
+          //get known offset
+
+            $item_know_ranking = array_intersect($total_items_category, $ranking_position_less1000["all"]);
+            $known_offset[$key] = count($item_know_ranking);
+
+            $total_known_offset = $total_known_offset + $known_offset[$key];
+
+          //get ranking_position on groups
+
+            foreach ($total_items_category as $group_item_position => $obj) {
+              
+
+              //convert to array to use array_intersect as a validation
+              $item_to_array = array(
+                "0" => $total_items_category[$group_item_position]
+              );
+
+              if (($item_match = array_intersect($item_array_to_search_bigger1000, $item_to_array)) != null) {
+                
+                  // sum 1 because arrays start at 0, but ranking start on 1 
+                  $groups_ranking_position[$key][key($item_match)] = $group_item_position + 1;                         
+              }                            
+            }               
+          }
+
+          var_dump("before known_offset");
+          var_dump($known_offset);
+          var_dump("known_offset all sum before complete_known_offset");
+          var_dump($total_known_offset);
+          var_dump("count ranking_position_less1000 all");
+          var_dump(count($ranking_position_less1000["all"]));
+
+          if ($token_negative_offset == true) {
+             $known_offset = $this -> complete_known_offset($known_offset, $item_groups["quantity_array"], $total_known_offset, count($ranking_position_less1000["all"]));
+          } 
+
+          $total_known_offset_after_complete_known_offset = 0;
+          foreach ($known_offset as $key => $value) {
+            $total_known_offset_after_complete_known_offset = $total_known_offset_after_complete_known_offset + $known_offset[$key];
+          }        
+         
+          var_dump("known_offset all sum after complete_known_offset");
+          var_dump($total_known_offset_after_complete_known_offset);
+          var_dump("after complete known_offset");
+          var_dump($known_offset);
+          var_dump("groups_ranking_position");
+          var_dump($groups_ranking_position);
+
+          $ranking_position_higher1000 = $this -> get_ranking_item_higher1000($known_offset, $item_groups["quantity_array"], $groups_ranking_position);
+          
+          var_dump("ranking_position_less1000");
+          var_dump($ranking_position_less1000["know"]);
+          var_dump('ranking_position_higher1000');
+          var_dump($ranking_position_higher1000);
+
+          if($ranking_position_less1000["know"] != null){
+             if ($ranking_position_higher1000 == null) { 
+               $ranking_position = $ranking_position_less1000["know"];}
+             else{
+               $ranking_position = $ranking_position_less1000["know"] + $ranking_position_higher1000;}
+             
+          }
+          else{
+            $ranking_position = $ranking_position_higher1000;
+          }
+          
+          var_dump('ranking_position');
+          var_dump($ranking_position);
+        }
+            
+        // null result equal to empty string to machine learning understanding 
+        foreach ($item_id_array as $key => $value) {
+          if ($ranking_position[$key] == null) {
+           $ranking_position[$key] = "";
+         }
+        }     
+
+       $end_time = microtime(true);
+       echo "<br> Rounded runtime: get_ranking_item ->" . round($end_time - $start_time, 4) . " seconds";
+
+       return $ranking_position;
+    }
+
+    public function get_ranking_item_higher1000($known_offset_array , $quantity_array, $groups_ranking_position){
+
+      //Pendiente hacer esta funcion comprobarla, arreglar todo el codigo y testear general el ranking con varios ejemplos. Es un gran paso!.
+
+      foreach ($groups_ranking_position as $group_key => $value) {
+        foreach ($groups_ranking_position[$group_key] as $item_position => $group_position) {
+
+          // cycle for all groups assuming that the ranking increases proportionally in each group.
+
+          $speed = $group_position/$known_offset_array[$group_key]; //adimensional
+          var_dump('speed');
+          var_dump($speed);
+          $other_group_position = 0;
+          $ranking_position[$item_position] = 0;
+          foreach ($known_offset_array as $key => $value) {
+            $other_group_position = $speed * $known_offset_array[$key];
+            // if the estimated position in the group exceeds the size of the group, the position will be limited to the group size 
+            if($other_group_position > $quantity_array[$key]){
+              $other_group_position = $quantity_array[$key];
+            }
+
+            //var_dump('other_group_position');
+            //var_dump($other_group_position);
+            //var_dump('quantity_array');
+            //var_dump($quantity_array[$key]);
+            $ranking_position[$item_position] = $ranking_position[$item_position] + $other_group_position;
+          }
+
+          //convert float to integer
+          $ranking_position[$item_position] = intval(round($ranking_position[$item_position], 0));
+          
+          var_dump('ranking_position');
+          var_dump($ranking_position[$item_position]);
+        }
+      }
+
+      var_dump('Final ranking_position');
+      var_dump($ranking_position);
+
+      return $ranking_position;
+    }
+
+
+    public function get_ranking_item_less1000($item_id_array, $category_id, $total_articles, $limit = 50, $country_id, $option_big_1000 = false){
+
+        //Pendiente esta funcion se le tiene que modificar la busqueda por items , problema devuelve array no mayor a 50 size
+
+         //var_dump(" get_ranking_item_less1000 item_id_array");
+         //var_dump($item_id_array);
+          
+        for ($j=1;  $j <= ceil($total_articles / $limit); $j++)
+        {
+
+          if($j>21){
+            break;
+            /*
+            open door to access token used
+            $category_array[] = $category_id . "&limit=" . $limit . "&offset=" . ($j-1)*50 . "&access_token=" . analysis::access_token();
+            */
+          }
+          else{
+          $category_array[] = $category_id . "&limit=" . $limit . "&offset=" . ($j-1)*50;
+          }  
+        }
+        
+        $i = 0;
+        //var_dump('category_array');
+        //var_dump($category_array);
+
+        //$total_items_category = $this -> get_articles_array_country($category_array, $country_id);
+        $total_items_category = $this -> get_real_articles_array_country($category_array, $country_id);
+
+        if ($option_big_1000 == true){
+          //$ranking_position = [0][0];
+          $ranking_position["all"] = $this -> get_real_articles_array_country($category_array, $country_id);
+          
+          //var_dump("category_array option_big_1000");
+          //var_dump(count($ranking_position["all"]));
+          //var_dump($ranking_position["all"]);         
+        }
+        else{
+          $ranking_position = [];
+        }
+
+        // new method
+
+        //get ranking_position on 1000 items search
+
+        foreach ($total_items_category as $item_position => $obj) {
+          
+          //var_dump('test cicle');
+          //var_dump($item_position);
+          //convert to array to use array_intersect as a validation
+          $item_to_array = array(
+            "0" => $total_items_category[$item_position]
+          );
+
+          if (($item_match = array_intersect($item_id_array, $item_to_array)) != null) {
+
+            if ($option_big_1000 == true){
+              // this are elements (less than 1000) how dont need more calculation.
+              //var_dump('item_position');
+              //var_dump($item_position);
+              $ranking_position["know"][key($item_match)] = $item_position + 1;
+            }
+            else{
+              // less than 1000
+              
+              $ranking_position[key($item_match)] = $item_position + 1;
+            }                           
+          }
+          if (count($ranking_position) == count($item_id_array)) {
+            var_dump("check if the search is all complete, to save memory");
+            break;
+          }                            
+        }
+
+        //end!
+        /* 
+        foreach ($total_items_category as $number_packages => $obj) {
+          foreach ($total_items_category[$number_packages]["results"] as $key => $value) {
+
+            //convert to array to use array_intersect as a validation
+            $item_to_array = array(
+              "0" => $total_items_category[$number_packages]["results"][$key]["id"]
+            );
+
+            if (($item_match = array_intersect($item_id_array, $item_to_array)) != null) {
+
+              if ($option_big_1000 == true){
+                // this are elements (less than 1000) how dont need more calculation.
+                $ranking_position["know"][key($item_match)] = $total_items_category[$number_packages]["paging"]["offset"] + $key + 1;
+              }
+              else{
+                // less than 1000
+                $ranking_position[key($item_match)] = $total_items_category[$number_packages]["paging"]["offset"] + $key + 1;
+              }         
+            }            
+          }
+
+          // after 50 items, check if the search is all complete, to save memory
+
+          if (count($ranking_position) == count($item_id_array)) {
+            var_dump("check if the search is all complete, to save memory");
+            break;
+          }  
+        }
+        */
+
+        if ($option_big_1000 == true){
+          var_dump("category_array option_big_1000");
+          var_dump(count($ranking_position["know"]));
+          var_dump($ranking_position["know"]);
+        }
+
+        
+
+        return $ranking_position;    
+    }
+
+    public function complete_known_offset($known_offset, $item_groups_quantity_array, $total_known_offset, $count_ranking_position_less1000_all){
+
+      //return known_offset without holds 
+      //pediente valorar si $total_known_offset hace falta, 18 de enero parece innecesario de acuerdo al metodo usado ya que se basa en proporcion con resepcto al total de articulos 
+      /*
+      $total_articles = 0;
+      foreach ($item_groups_quantity_array as $key => $value) {
+        $total_articles = $total_articles + $item_groups_quantity_array[$key]; 
+      }
+      */
+
+      //Calculate total_articles_in_holds
+      $total_articles_in_holds = 0;
+      foreach ($item_groups_quantity_array as $key_base => $value) {
+        foreach ($known_offset as $key_compare => $value) {
+          if ($key_base == $key_compare) {
+          continue 2;
+          }
+        }
+
+        $total_articles_in_holds = $total_articles_in_holds + $item_groups_quantity_array[$key_base];
+      }
+
+      //fills all offset holes
+
+      $total_known_offset_holds = $count_ranking_position_less1000_all - $total_known_offset;
+
+      foreach ($item_groups_quantity_array as $key_base => $value) {
+        foreach ($known_offset as $key_compare => $value) {
+          if ($key_base == $key_compare) {
+          continue 2;
+          }
+        }
+
+        $known_offset[$key_base] = (int)($total_known_offset_holds * $item_groups_quantity_array[$key_base]/$total_articles_in_holds);
+
+      }
+
+      ksort($known_offset); //organize array, could be deleated
+
+      return $known_offset;
+    }
+
+    public function get_ranking_item_groups($total_articles, $category_id,  $offset_group = 1000, $country_id)
+    {
+
+      //pendiente poner un limite de tiempo max para que la funcion no trabaje indefinidamente. puede caer en bucles infinitos.
+
+      $start_time = microtime(true);
+
+      var_dump("init get_ranking_item_groups");
+
+      $min_max_price = $this -> groups_maker(0, $total_articles, $total_articles, $add_max_infinite = true); //assume (max_init = $total_articles);
+
+      foreach ($min_max_price as $key => $value) {
+           
+        $category_array[] = $category_id . "&limit=1" . "&offset=0" . "&price=" . $min_max_price[$key]["min"] . "-" . $min_max_price[$key]["max"]; 
+      }
+
+      var_dump($category_array);   
+
+      $total_items_category = $this -> get_articles_array_country($category_array, $country_id);
+
+      foreach ($total_items_category as $key => $value) {
+        $quantity_array[$key] = $total_items_category[$key]["paging"]["total"];
+      }
+
+      var_dump($quantity_array);
+
+      // unified and separate until all quantity_array elements are < $offset_group (Commonly 1000)
+       $count_cycle = 0;
+       for ($key = 0;  $key < count($quantity_array); $key++) {
+
+        repeat_unified_and_separate: // goto (start again after every "unified and separate")
+        //var_dump("start separate and unified");
+        //var_dump($key);
+        
+        if ($quantity_array[$key] > 1000) {
+          $groups_maker_unified = $this -> groups_maker_unified($quantity_array, $min_max_price, $groups_max_size = 1000);
+
+          var_dump($groups_maker_unified);
+
+          $groups_maker_separate = $this -> groups_maker_separate($groups_maker_unified["quantity_array"]
+          , $groups_maker_unified["min_max_price"], $groups_max_size = 1000, $category_id, $country_id);
+
+          //Pendiente crear salida de esta funcion cuando resta en pesos (333 y 330.1) diferencia de 0.1
+
+          var_dump($groups_maker_separate);
+
+          $quantity_array = $groups_maker_separate["quantity_array"];
+          $min_max_price =  $groups_maker_separate["min_max_price"];
+
+          // repeat again the cycle but just 10 times for bugs. 
+          // Pendiente valorar si 10 veces es mucho o poco testear esta funcion 1 hora 
+          $key = 0;
+          $count_cycle = $count_cycle + 1; 
+
+          var_dump("count_cycle no more than 10");
+          var_dump($count_cycle);
+
+          if ($count_cycle < 10){
+            goto repeat_unified_and_separate;
+          }
+          else{
+            // More than 10 rounds on unify and separate, the model go out.
+            break;
+          }         
+        }
+        
+        //var_dump("finish unified and separate");
+        //var_dump($key);
+      }
+
+      $groups_maker_unified = $this -> groups_maker_unified($quantity_array, $min_max_price, $groups_max_size = 1000);
+
+      $quantity_array = $groups_maker_unified["quantity_array"];
+      $min_max_price = $groups_maker_unified["min_max_price"];
+
+      var_dump("Final group formation");
+      var_dump($quantity_array);
+      var_dump($min_max_price);
+
+      //Revisar suma "No match!" that s strange
+      $sum = 0;
+      foreach ($quantity_array as $key => $value) {
+        $sum = $sum + $quantity_array[$key];
+      }
+
+      var_dump("sum all elements");
+      var_dump($sum);
+
+      $item_groups =  $groups_maker_unified;
+
+      $end_time = microtime(true);
+         echo "<br> Rounded runtime: get_ranking_item_groups ->" . round($end_time - $start_time, 4) . " seconds";
+
+      return $item_groups;     
+    }
+
+    public function groups_maker($min_money, $max_money, $total_items, $add_max_infinite = false){
+
+      $total_partision = ceil($total_items / 1000); 
+      $range_to_be_partitioned = ($max_money - $min_money)/$total_partision;
+
+      for ($i=0; $i < $total_partision; $i++){
+        //var_dump("step groups_maker");
+        //var_dump($i);
+        $partision_range[$i]["min"] = round($min_money + $i * $range_to_be_partitioned, 1);
+        $partision_range[$i]["max"] = round($min_money + ($i + 1)* $range_to_be_partitioned, 1);
+
+        //Filter if there is more than 1000 in the same price
+        //Pendiente the probability of being locked in the range to infinity is 0?.
+        if (($partision_range[$i]["max"] - $partision_range[$i]["min"]) < 0.2) {
+
+          var_dump("activate locked more than 1000 in one price");
+          unset($partision_range);
+          $partision_range[0]["min"] = $min_money;
+          $partision_range[0]["max"] = $max_money;
+
+          return $partision_range;
+        }
+      }
+
+      //convert last max to infinite
+      if ($add_max_infinite == true) {
+        $partision_range[count($partision_range ) - 1]["max"] = "*";
+      }
+
+      return $partision_range;
+    }
+
+    public function groups_maker_separate($quantity_array_work, $min_max_price_work, $groups_max_size = 1000, $category_id, $country_id)
+    {
+    
+      foreach ($quantity_array_work as $key => $value) {
+        
+        if ($quantity_array_work[$key] > $groups_max_size) {
+
+          //rare case last element in quantity_array_work is > 1000 (adjust * "infinite") this need to be tested // 14 de enero tested it work correctly
+          if ($min_max_price_work[$key]["max"] == "*") {
+            $min_max_price_work[$key]["max"] = $min_max_price_work[$key]["min"] * 2;
+
+
+            $min_max_price_separate = $this -> groups_maker($min_max_price_work[$key]["min"], $min_max_price_work[$key]["max"], $quantity_array_work[$key], $add_max_infinite = true);
+
+            var_dump("min_max_price_separate add_max_infinite = true");
+            var_dump($min_max_price_separate);
+          }
+          else{
+            //common case
+            $min_max_price_separate = $this -> groups_maker($min_max_price_work[$key]["min"], $min_max_price_work[$key]["max"], $quantity_array_work[$key], $add_max_infinite = false);
+          }          
+        }
+        else{
+          $min_max_price_separate = [];
+          $min_max_price_separate[0] = $min_max_price_work[$key];
+          //var_dump("min_max_price dont need to be separated");
+          //var_dump($min_max_price_separate);
+        }
+
+        //cleaned all arrays
+        if ($key == 0) {
+          $min_max_price_cleaned = $min_max_price_separate;
+          //var_dump("first after min_max_price_cleaned");
+          //var_dump($min_max_price_cleaned);  
+        }
+        else{
+          $min_max_price_cleaned = array_merge($min_max_price_cleaned, $min_max_price_separate);
+          //var_dump("after min_max_price_cleaned");
+          //var_dump($min_max_price_cleaned);  
+        }                        
+      }
+
+      // Already calculated $min_max_price_cleaned now calculate $quantity_array_cleaned
+
+      foreach ($min_max_price_cleaned as $key => $value) {
+           //$offset_price = round($total_articles/($j*2), 1);
+        $category_array[] = $category_id . "&limit=1" . "&offset=0" . "&price=" . $min_max_price_cleaned[$key]["min"] . "-" . $min_max_price_cleaned[$key]["max"]; 
+      }
+
+      var_dump($category_array);   
+
+      $total_items_category = $this -> get_articles_array_country($category_array, $country_id);
+
+      //var_dump($total_items_category);
+
+      foreach ($total_items_category as $key => $value) {
+        $quantity_array_cleaned[$key] = $total_items_category[$key]["paging"]["total"];
+      }
+
+      //var_dump($quantity_array_cleaned);
+
+      $groups_maker_separate["quantity_array"] = $quantity_array_cleaned;
+      $groups_maker_separate["min_max_price"] = $min_max_price_cleaned;
+
+      return $groups_maker_separate;
+    }
+
+    public function groups_maker_unified($quantity_array_work, $min_max_price_work, $groups_max_size = 1000){
+
+      $size_quantity_array = count($quantity_array_work);
+      
+      //unified
+      for ($i = $size_quantity_array - 1; $i > 0; $i--){
+        
+        if (($quantity_array_work[$i] + $quantity_array_work[$i - 1]) <= $groups_max_size){
+
+          $quantity_array_work[$i-1] = ($quantity_array_work[$i] + $quantity_array_work[$i - 1]); //unify 2 elements
+          $quantity_array_work[$i] = null; //eliminate 1 element 
+                          
+          $min_max_price_work[$i-1]["min"] = $min_max_price_work[$i-1]["min"]; //same minimum
+          $min_max_price_work[$i-1]["max"] = $min_max_price_work[$i]["max"]; //maximum unified
+
+          $min_max_price_work[$i]["min"] = null;
+          $min_max_price_work[$i]["max"] = null;
+          
+        }
+        
+      } 
+
+      //clean null spaces
+      $quantity_array_cleaned = [];
+      $min_max_price_cleaned = []; 
+
+      foreach ($quantity_array_work as $key => $value) {
+        if ($quantity_array_work[$key] != null) {
+          $quantity_array_cleaned[] = $quantity_array_work[$key];
+          $min_max_price_cleaned[] = $min_max_price_work[$key];
+        }
+      }
+
+      $groups_maker_unified["quantity_array"] = $quantity_array_cleaned;
+      $groups_maker_unified["min_max_price"] = $min_max_price_cleaned;
+
+      return $groups_maker_unified;
+    }
+
+    public function get_children_local($main_parent_category, $options_work_and_save, $category_offset = 0, $max_article_counter = 12000000)
+    {
+        //$category_offset to start calculating to divide the runs, $max_article_counter is adjusted to 12 million since the category that has the most article in MLM has 12 million items
+
+        //Pendiente poner en funcion de $k_limite y count R) Creo que no es necesario por el moemtno aunque sí podría servir para categorias padres con muchas hojas se puede valorar sí es mejor que category_offset y max_article_counter para las corridas.
+
+        $start_time = microtime(true);
+        $k = 0;
+        $item_counter = 0;
+        //take time, hit counter, item counter
+
+        $local_file = 'categoriesMLM.json';
+
+        $local = file_get_contents("D:/mercadolibre_data/" . $local_file);
+
+        $obj = json_decode($local, $assoc=true);
+        
+        var_dump(count($obj));
+        var_dump($obj[$main_parent_category]['path_from_root'][0]["id"]);
+                
+        $obj_size = count($obj);
+        $obj_num = array_values($obj);
+
+        for ($i=0; $i < $obj_size; $i++) {
+            if ($obj_num[$i]['path_from_root'][0]["id"] == $main_parent_category) {
+                 
+                 //Pendiente poner $obj_num[$i]['path_from_root'][2]["id"] identificar automaticamente que sea 2. R)  testear par valorar
+                //Salvar la informacion de los articulos de pieza especifica de carro y enviarlo a mi gmail.
+
+                if ($this->get_children($obj_num[$i]["id"]) == null) {
+                    $k = $k + 1;
+                    var_dump($i . " is " . $obj_num[$i]["id"]  . " - category sheet");
+
+                    $obj = $this->get_articles($obj_num[$i]["id"]);
+       
+                    $total_articles = $obj["paging"]["total"];
+
+                    $item_counter = $item_counter + $total_articles;
+
+                    var_dump("item_counter : " . $item_counter);
+
+                    if ($item_counter < $max_article_counter) {
+                        if ($k < $category_offset) {
+                            var_dump("skipped the number k : " . $k);
+                            continue;
+                        } else {
+                            //Remember to update access_token before running
+                            //Remember to update the php.ini for time limit
+
+                            echo "k value to process " . $k;
+                            $result_total = $this -> get_articles_total($obj_num[$i]["id"], 50, $options_work_and_save);
+                            $this -> save_error($save = false);// $save=false It is equivalent to working errors
+                        }
+                    } else {
+                        echo "The value k for which he stayed processing was " . $k;
+                        $end_time = microtime(true);
+
+                        
+                        echo "<br>Get_children_local time rounded to stop: " . round($end_time - $start_time, 4) . " seconds";
+                        return $k;
+                    }
+                } else {
+                    //  var_dump($i . " es " . $obj_num[$i]["id"]  . " -  middle_child");
+                }
+            } else {
+                //var_dump($i . "negative");
+            }
+        }
+
+        var_dump("Total hits are: " . $k);
+        
+        $end_time = microtime(true);
+
+        echo "<br> Get_children_local time rounded: " . round($end_time - $start_time, 4) . " seconds";
+    }
+
+    public function custom_generalmatch_search($search, $plus, $return_object = false){
+
+      //Pendiente arreglar match_ids como respuesta a match, ya que se devuelven objetos y strings "ids"
+
+        foreach (analysis::$Name_coin as $country_name => $coin) {
+
+            var_dump("Country search : " . $country_name);
+
+            $country_search = analysis::custom_search($search, $plus, $country = $country_name, $pass_access_token = false);
+
+            foreach ($country_search['results'] as $key => $value) {
+
+                $titles_array_to_compare[$key] = $country_search['results'][$key]['title'];
+            }
+
+            $position_match_array = $this -> compare_title_preg_match_title_input($search, $titles_array_to_compare, $option_match = array("return_position_match" => true) , $remove_words_relatedto = null);
+
+            $match_number = 0;
+
+            foreach ($position_match_array as $key => $value) {
+
+                if ($value) {
+
+                    $match_item = $country_search['results'][$key];
+                    //$match_object[$country_name][$match_number] = $country_search['results'][$key];
+                    $match_ids[$country_name][$match_number] = $country_search['results'][$key]['id'];
+
+                    $match_number = $match_number + 1;
+
+                }   
+            }
+        }
+
+        if ($return_object == true) {
+          $count = 0;
+
+          //group item to search answer
+          foreach ($match_ids as $country_name => $value) {
+            
+            foreach ($match_ids[$country_name] as $item_id => $value) {
+               
+              $array_to_search[$count] = $match_ids[$country_name][$item_id];
+              $count = $count + 1;
+              //$save_position[$country_name][$item_id] = $item_id; // could be also null
+            }
+          }
+
+          $object_vector = $this -> get_full_article_array($array_to_search);
+
+          //reposition of object into return form
+          $count = 0;
+          foreach ($match_ids as $country_name => $value) {
+            
+            foreach ($match_ids[$country_name] as $item_id => $value) {
+               
+            $match_ids[$country_name][$item_id] = $object_vector[$count];
+            $count = $count + 1;
+              
+            }
+          }
+        }
+
+        return $match_ids;
+    }
+
+    public function custom_generalcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus = null, $return_object = true, $expansion_method){
+
+       foreach (analysis::$Name_coin as $country_name => $coin) {
+
+          var_dump("Competition Country search : " . $country_name);
+
+         $result_competition[$country_name] = $this -> custom_localcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus, $country_name, $return_object, $expansion_method);          
+      }
+
+      return $result_competition;
+    }
+
+    public function custom_localcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus, $country_id, $return_object = false, $expansion_method){
+
+      //Pendiente crear un custom_generalcompetition_search para todos los paises y no solamente un pais en especifico
+
+      if($country_id == "MLB"){
+
+         $title_type = analysis::traduce_to_pt($title_type);
+         $title_search = $title_type . " " . $title_brand . " " . $title_model . " " . $title_plus;
+      }
+      else{
+        $title_search = $title_type . " " . $title_brand . " " . $title_model . " " . $title_plus;
+     
+      }
+      var_dump("title search");
+      var_dump($title_search);
+      
+
+      //take $match_category search
+      /*
+      $country_search = analysis::custom_search($title_search, $plus, $country = $country_id, $pass_access_token = false);
+
+        
+          foreach ($country_search["available_filters"] as $key => $value) {
+            if("category" == $country_search["available_filters"][$key]["id"])
+            {
+              $match_category = $country_search["available_filters"][$key]["values"][0]["id"];
+              break;
+            }
+          }
+      */
+
+      //search competition type + brand
+
+      $short_search = $title_type . " " . $title_brand;  
+
+      //take $match_category search
+      
+      $match_category = analysis::get_category_predictor($short_search, $country_id);
+
+      if ($plus == null) {
+        $plus_category = "&category=" . $match_category;
+      }
+      else {
+        $plus_category = "&category=" . $match_category . $plus;
+      }  
+
+      $country_search = analysis::custom_search($short_search, $plus_category, $country = $country_id, $pass_access_token = false);
+
+
+      /*
+      if(($expansion_method == "total_items_competition") && ($country_search["paging"]["total"] == 0)){
+
+        var_dump("test country_search null asnswer");
+        var_dump($country_search);
+
+        //repeat search if category_predictor filter, throws a response zero items, in order to obtain information.
+        $short_search = $title_type;
+        $country_search = analysis::custom_search($short_search, $plus_category, $country = $country_id, $pass_access_token = false);
+
+        var_dump("after test country_search null asnswer");
+        var_dump($country_search);
+      }
+      */
+
+      //take total_items_competition
+      
+      $total_items_competition = $country_search["paging"]["total"];
+      
+
+      //take "primary_results"
+   
+      $primary_results_items_competition = $country_search["paging"]["primary_results"];
+      
+
+        if($expansion_method == "total_items_competition_match_category"){
+        
+          for ($j=1;  $j <= ceil($total_items_competition / $limit=50); $j++)
+            {
+
+            if($j>2){
+              //Pendiente poner de limite 100 articulos para que revisar el machine learning.. puede expandirse a 1000 , puede expandirse a otros paises
+
+              break;
+              
+              //$plus_array[] = "&category=" . $category_id . "&limit=" . $limit . "&offset=" . //($j-1)*50 . "&access_token=" . analysis::access_token();
+              
+            }
+            else{
+
+              if ($j == ceil($total_items_competition / $limit)) {
+                $last_limit = $total_items_competition % $limit;
+
+                $plus_array[] = "&category=" . $match_category . "&limit=" . $last_limit . "&offset=" . ($j-1)*50 . $plus_category;
+              }
+              else{
+                $plus_array[] = "&category=" . $match_category . "&limit=" . $limit . "&offset=" . ($j-1)*50 . $plus_category;
+              }         
+            }  
+          } 
+        }
+        elseif($expansion_method == "primary_results_items_competition"){
+
+          for ($j=1;  $j <= ceil($primary_results_items_competition / $limit=50); $j++)
+          {
+
+            if($j>21){
+              //Pendiente poner de limite 100 articulos para que revisar el machine learning.. puede expandirse a 1000 , puede expandirse a otros paises
+
+              break;
+              
+              //$plus_array[] = "&category=" . $category_id . "&limit=" . $limit . "&offset=" . ($j-1)*50 . "&access_token=" . analysis::access_token();
+              
+            }
+            else{
+
+              if ($j == ceil($primary_results_items_competition / $limit)) {
+                $last_limit = $primary_results_items_competition % $limit;
+
+                $plus_array[] = "&category=" . $match_category . "&limit=" . $last_limit . "&offset=" . ($j-1)*50 . $plus_category;
+              }
+              else{
+                $plus_array[] = "&category=" . $match_category . "&limit=" . $limit . "&offset=" . ($j-1)*50 . $plus_category;
+              }
+            }  
+          }              
+        }
+        elseif ($expansion_method == "total_items_competition") {
+
+          // search only by title, soft search
+          $short_search = $title_type;
+
+          $country_search = analysis::custom_search($short_search, $plus_category, $country = $country_id, $pass_access_token = false);
+
+          $total_items_competition = $country_search["paging"]["total"];
+          var_dump("total_items_competition");
+          var_dump($total_items_competition);
+
+          for ($j=1;  $j <= ceil($total_items_competition / $limit=50); $j++)
+            {
+
+            if($j>2){
+              //Pendiente poner de limite 100 articulos para que revisar el machine learning.. puede expandirse a 1000 , puede expandirse a otros paises
+
+              break;
+              
+              //$plus_array[] = "&category=" . $category_id . "&limit=" . $limit . "&offset=" . //($j-1)*50 . "&access_token=" . analysis::access_token();
+              
+            }
+            else{
+
+              if ($j == ceil($total_items_competition / $limit)) {
+                $last_limit = $total_items_competition % $limit;
+
+                $plus_array[] = "&category=" . $match_category . "&limit=" . $last_limit . "&offset=" . ($j-1)*50 . $plus_category;
+              }
+              else{
+                $plus_array[] = "&category=" . $match_category . "&limit=" . $limit . "&offset=" . ($j-1)*50 . $plus_category;
+              }         
+            }  
+          }
+        }
+        else {
+          return "select a correct expansion_method";
+        }
+    
+      //search items_competition ($match_category and $short_search)
+
+      //var_dump("test country_search");
+      //var_dump($country_search);
+
+      var_dump("plus array custom_localcompetition_search");
+      var_dump($plus_array);  
+
+      var_dump("total_items_competition");
+      var_dump($total_items_competition);
+
+      var_dump("primary_results_items_competition");
+      var_dump($primary_results_items_competition);
+
+      $items_competition_search = analysis::custom_search_array($short_search, $plus_array, $country, $pass_access_token = false);
+
+      //var_dump("0.5-Test items_competition");
+      //var_dump(count($items_competition_search));
+      //var_dump($items_competition_search);
+
+      foreach ($items_competition_search as $search => $value) {
+        foreach ($items_competition_search[$search]["results"] as $count_item => $item) {
+
+          if ($return_object == true) {
+            $items_competition[/*$count_item + $offset*/] = $items_competition_search[$search]["results"][$count_item];
+          }
+          else{
+           //$return_object = false "return ids"  
+           $items_competition[/*$count_item + $offset*/] = $items_competition_search[$search]["results"][$count_item]["id"];
+          }                
+          
+        }    
+      }
+
+      var_dump("1-Test items_competition");
+      var_dump(count($items_competition));
+
+      //Transform (search object) to item object format, in order to unify with custom_generalmatch_search 
+
+      foreach ($items_competition as $item_id => $value) {
+               
+        $array_to_search[$item_id] = $items_competition[$item_id]["id"];
+      }
+
+      var_dump("2-Test items_competition");
+      var_dump($array_to_search);
+
+      $items_competition = $this -> get_full_article_array($array_to_search);
+
+      return $items_competition;     
+    }
+     
+    public function file_force_contents($dir, $contents)
+    {
+        //Force the creation and replacement of the directory address
+        $parts = explode('/', $dir);
+        $file = array_pop($parts);
+        $dir = '';
+        foreach ($parts as $part) {
+            if (!is_dir($dir .= "/$part")) {
+                mkdir($dir);
+            }
+        }
+        file_put_contents("$dir/$file", $contents);
+    }
+
+    public function work_and_save($category, $item_ids_array, $dir_save, $options_work_and_save = array())
+    {
+        //This function does not return argument is responsible for working and saving local information    
+        // Pending Assess pass to switch // Pending appraise transform it into a filter to put all the necessary features
+
+      //////////////    Work model     ////////////////////
+
+      if (array_key_exists('get_inactive', $options_work_and_save) &&  $options_work_and_save['get_inactive'] == true) {
+          echo "get_inactive process initiated ";
+          $obj_array = analysis::get_full_article_inactive_array($item_ids_array);
+      }
+
+      elseif (array_key_exists('get_conversion', $options_work_and_save) &&  $options_work_and_save['get_conversion'] == true){
+
+          echo "get_conversion process initiated ";
+          $obj_array = analysis::get_full_article_conversion_array($item_ids_array, $options_work_and_save = array());
+           /* Save and rewrite above a .json*/
+           $only_category_number = $this -> explode_string($category, 'category');
+
+           if (array_key_exists('more_views', $options_work_and_save) &&  $options_work_and_save['more_views'] == true){$action = "_views";} 
+           elseif (array_key_exists('more_solds', $options_work_and_save) &&  $options_work_and_save['more_solds'] == true){$action = "_solds";}
+           elseif (array_key_exists('more_conversion', $options_work_and_save) &&  $options_work_and_save['more_conversion'] == true){$action = "_conversion";}
+           else {$action = null;}
+      }
+
+      else{
+           //echo "Not especial options_work process initiated "; 
+          $obj_array = $this->get_full_article_array($item_ids_array);
+      }
+
+      //////////////       Save Model      //////////////////// 
+
+      if (array_key_exists('dir_to_save', $options_work_and_save)) {
+        $dir_save = $options_work_and_save['dir_to_save'];
+      }
+
+      if (array_key_exists('get_conversion', $options_work_and_save) &&  $options_work_and_save['get_conversion'] == true) {
+
+        // Save only in one file all the information
+           var_dump("save it in one file");
+           $dir = $dir_save . $only_category_number . "/" . "datos" . $action . ".json";
+           $json = json_encode($obj_array);
+           $save_it = $this->file_force_contents($dir, $json);
+           goto already_save;
+      }
+
+      if (array_key_exists('dont_save', $options_work_and_save) &&  $options_work_and_save['dont_save'] == true){
+        echo "<br> Data was not saved, only processed";
+         already_save:
+          return;
+      }
+
+      // saved model to download items 
+
+       else {
+        $only_category_number = $this -> explode_string($category, 'category');
+        foreach ($obj_array as $key => $value) {  
+            // Saved for each items in a json file       
+            $dir = $dir_save . $only_category_number . "/" . $item_ids_array[$key] . ".json";
+            $json = json_encode($obj_array[$key]);
+            $save_it = $this->file_force_contents($dir, $json);
+        }
+      }
+        
+        //open_articles It is used to test by opening the file where it is saved by: $open_it = $this->open_articles($dir);
+    }
+
+    public function save_articles($category, $item_ids_array, $dir_save, $options_save = array()){
+
+     $only_category_number = $this -> explode_string($category, 'category');
+     
+     if (array_key_exists('more_views', $options_save) &&  $options_save['more_views'] == true){$action = "_views";} 
+     elseif (array_key_exists('more_solds', $options_save) &&  $options_save['more_solds'] == true){$action = "_solds";}
+     elseif (array_key_exists('more_conversion', $options_save) &&  $options_save['more_conversion'] == true){$action = "_conversion";}
+     else {$action = null;}
+
+     $dir = $dir_save . $only_category_number . "/" . "datos" . $action . ".json";
+     $json = json_encode($item_ids_array);
+     $save_it = $this->file_force_contents($dir, $json);
+      
+    }
+
+    public function save_json($json, $dir_save){
+
+      $json = json_encode($json); 
+      $save_it = $this->file_force_contents($dir_save, $json);
+    }
+
+    public function save_error($save = true, $category_offset_error = 0){
+    
+      //// "if" save error mode, "else" work error mode
+      static $k = 0;
+      static $category_error;  
+      
+      if ($save == true){   
+
+      $offset = $this -> explode_string($category_offset_error, 'offset'); 
+
+          if ($offset > 10000) {
+            return; //For values ​​greater than 10,000 this method cannot be used. The api blocks. //Pendiente borrar 
+          }
+          else{
+
+          $k = $k + 1; 
+          var_dump("Of all the marked errors, this is the error #: " . $k); 
+          $category_error[$k] = $category_offset_error; 
+          var_dump($category_error);
+
+
+          //save local data_error
+          //1- category_error
+          //2- $GLOBALS["options_work_and_save"]
+          /*
+           $data_error[$k] = array(
+            'category_error' => $category_error[$k], 
+            'options_work_and_save' => $GLOBALS["options_work_and_save"]
+          );
+           
+          $save_error_local = local::save_error_local($data_error[$k], $k);
+
+          $save_it = $this->file_force_contents($save_error_local['dir'], $save_error_local['json']); 
+          */
+
+          }
+      }
+      else{
+
+        //Por aquí me quedé 8/11/2019
+              
+        $this -> work_error($category_error);
+        
+      }
+    }
+    
+    public function work_error($category_error){
+     
+      static $ok_jump_this_one;
+
+      foreach ( $category_error as $key => $value) {
+        //var_dump($key);
+        if ($category_error[$key] === 0 || $ok_jump_this_one[$key] === true) {
+          $category_error[$key] = 0;
+          //$save_error_local = local::save_error_local($data_error = null, $key); //Pendiente revisar como reacciona ante el null
+          //$erase_it = $this->file_force_contents($save_error_local['dir'], $save_error_local['json']); 
+
+          //Pendiente poner el destructor (llamada a local para destruir el archivo)
+          continue; 
+        }  
+        
+        var_dump("Work Category error: " . $category_error[$key]);   
+          $obj = $this->get_articles($category_error[$key]);
+          $total_articles = $obj["paging"]["total"];
+          var_dump($total_articles); //Pendiente valorar 
+          $i = 0;
+          $limit = $this -> explode_string($category_error[$key], 'limit');         
+          $category = $this -> explode_string($category_error[$key], 'category');           
+          $offset = $this -> explode_string($category_error[$key], 'offset');
+          
+            while ($i < $limit) {
+               if ($obj["results"][$i] == null) {
+                   if (($total_articles - $offset) < $limit && $i == $total_articles % $limit) {
+                       var_dump("last value recognition works");
+                       $ok_jump_this_one[$key] = true; //error mark already solved
+                       goto offset_process;  // It is not a calling error, but the elements are over.
+                   } else {
+                       var_dump("Error #: " . $key . " was not resolved");
+                       var_dump($category_error[$key]);
+                       $ok_jump_this_one[$key] = false;
+                       continue 2; //jump, so that the error is solved on another occasion that is called work_error ()
+                   }
+
+               }
+
+               if ($i == $limit-1) {
+                 
+                 $ok_jump_this_one[$key] = true; // error mark already solved
+                 
+                 var_dump("yeah!! solved the error #:" . $key);
+                 var_dump($category_error[$key]);
+                 
+               }
+
+               $article = $obj["results"][$i];
+               $item_id = array_values($article);
+
+               //var_dump($i + 1 + ($j * $limit) - $limit + $plus_token);
+               //var_dump($article);
+               //var_dump($item_id[0]);
+
+               $item_ids_array[$i] = $item_id[0]; 
+
+               $i++;
+           }
+           
+           offset_process:  // goto jump
+
+           $this -> work_and_save($category, $item_ids_array, self::$SAVE_ARTICLES, $GLOBALS["options_work_and_save"]);
+           var_dump($item_ids_array);
+        }
+
+        var_dump("after");
+        var_dump($category_error);
+
+        var_dump("jump this ones");
+        var_dump($ok_jump_this_one);
+    }
+
+    public function open_articles($dir)
+    {
+        
+        $local = file_get_contents("C:/" . $dir);
+               
+        $obj = json_decode($local, $assoc=true);
+        
+        var_dump($obj);
+    }
+
+    /********           expansive method with monte carlo          *********/
+
+    public function get_articles_expansion($category, $expansion_coefficient)
+    {
+        //This first article json format is short (little info)
+        
+        $url = self::$GET_ARTICLES_URL . $category;
+
+        $only_category_number = $this->explode_string($category, 'category'); //remove the "offset" and "limit" leave only the category
+
+        $json = curl::file_get_contents_curl($url, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+
+        $obj = json_decode($json, $assoc = true);
+
+        $size_array = count($obj['results']); if ($size_array < $expansion_coefficient) { return;}
+        
+        for ($i=0; $i < $expansion_coefficient; $i++) {
+          $rand = random_int(0, $size_array-1);
+          $item_title = $obj['results'][$rand]['title'];
+          $this->expansion_search($item_title, $only_category_number, $expansion_coefficient);    
+        }
+              
+        return $obj;
+    }
+
+    public function expansion_search($item_title, $only_category_number, $expansion_coefficient){
+
+    echo "Item : " . $item_title . " has been expanded <br>"; 
+      $search_items = analysis::custom_search($item_title, "&category=" . $only_category_number, $country = "MLM");
+
+      $size_array = count($search_items['results']); if ($size_array < $expansion_coefficient * 2 ) { return;}
+
+      if ($search_items["paging"]["total"] > 50) {
+
+        $plus = "&offset=" . strval($search_items["paging"]["total"] - 50) . "&limit=50"; 
+        analysis::custom_search($item_title, "&category=" . $only_category_number . $plus, $country = "MLM");  
+
+        for($i=0; $i < 50; $i++) {
+     
+          $article = $search_items["results"][$i];
+          $item_id = array_values($article);
+          $result_array[$i] = $item_id[0];    
+        }
+      }
+      else {
+        return ;
+      }
+ 
+        var_dump($result_array);
+        $result = $this->work_and_save($only_category_number, $result_array, self::$SAVE_ARTICLES, $GLOBALS["options_work_and_save"]);
+        $this->save_expansion_count($show_count = null);
+
+    }
+
+    public function save_expansion_count($show_count = null){
+
+      static $expansion_count = 0;
+      
+      if ($show_count == true) { return $expansion_count;}
+      else{$expansion_count = $expansion_count + 50;}
+
+    }
+
+    /***   Final expansive method   ***/
+
+    public static function explode_string($category, $option)
+    {
+      //Performance: "fastest" it takes to work a call average 4.0E-5 seconds
+
+      $portions = explode("&", $category);
+
+      switch ($option) {
+
+        case 'category':
+          return $portions[0]; // the search is set so that category goes first
+
+        case 'nickname':
+        foreach ($portions as $key => $value) {
+          if (preg_match("/nickname/i", $portions[$key])){
+            $order_and_value = preg_split('/=/', $portions[$key], -1, PREG_SPLIT_OFFSET_CAPTURE); //array of 2 arrays example: {$order_and_value[0][0]=limit and $order_and_value[1][0]= 50};
+            $value = $order_and_value[1][0]; //
+            return $value;           
+          }         
+        }  
+
+        case 'offset':
+
+          foreach ($portions as $key => $value) {
+            if (preg_match("/offset/i", $portions[$key])){
+              $order_and_value = preg_split('/=/', $portions[$key], -1, PREG_SPLIT_OFFSET_CAPTURE); 
+              $value = $order_and_value[1][0]; 
+              return $value;          
+            }         
+          } 
+
+        case 'limit':
+
+          foreach ($portions as $key => $value) {
+            if (preg_match("/limit/i", $portions[$key])){
+              $order_and_value = preg_split('/=/', $portions[$key], -1, PREG_SPLIT_OFFSET_CAPTURE); 
+              $value = $order_and_value[1][0]; //
+              return $value;           
+            }         
+          }
+                       
+        default:
+         echo "Error in declaration of option";
+         return;
+      }
+    }
+
+    /********           Item Macheo          *********/
+
+    /* options_method_to_compare = array(
+       "compare_title" => "similar_text",
+       "compare_title" => "preg_match",
+       "compare_price" => "lineal"
+       )
+
+    */
+
+    public function compare_items($item_to_match, $items_array_to_compare, $options_method_to_compare = null){
+ 
+      //array_unshift add $ item_to_match, as the first element of the array to search 
+      $array_to_search = $items_array_to_compare;
+      array_unshift($array_to_search, $item_to_match); 
+
+      //get json with features
+      $obj_array = $this->get_full_article_array($array_to_search);
+
+      if ($options_method_to_compare == null) {
+        
+      $result["title_match_percent"] = $this -> compare_title_similar_text($obj_array, $items_array_to_compare);
+      $result["price_match_percent"] = $this -> compare_price_lineal($obj_array, $items_array_to_compare);
+      return $result;
+
+      }
+
+      //Compare title "similar_text"
+
+      if ((array_key_exists('compare_title',  $options_method_to_compare) && $options_method_to_compare['compare_title'] == "similar_text"))
+      { 
+        $result = $this -> compare_title_similar_text($obj_array, $items_array_to_compare);
+        return $result; 
+      } 
+
+      //Compare titulo "preg_match" Check that all the words in A are in B
+      
+      if ((array_key_exists('compare_title',  $options_method_to_compare) && $options_method_to_compare['compare_title'] == "preg_match"))
+      {
+        if ((array_key_exists('remove_words',  $options_method_to_compare) && $options_method_to_compare['remove_words'] != null))
+        {$result = $this -> compare_title_preg_match($obj_array, $items_array_to_compare, $options_method_to_compare['remove_words']);} 
+        else{
+        $result = $this -> compare_title_preg_match($obj_array, $items_array_to_compare, $remove_words_relatedto = null);
+        } 
+        return $result;                 
+      }
+      
+      //Compare price "linear" price linear comparison model
+
+       if ((array_key_exists('compare_price',  $options_method_to_compare) &&   $options_method_to_compare['compare_price'] == "lineal"))
+      {
+        $result = $this -> compare_price_lineal($obj_array, $items_array_to_compare);
+        return $result;
+      }
+    }
+
+    public function compare_title_similar_text($obj_array, $items_array_to_compare){
+
+        $first = $this -> remove_words_and_lower($obj_array[0]['title'], $words_to_remove = "cell");
+        var_dump($first);
+        foreach ($items_array_to_compare as $key => $value) {
+          $second = $this -> remove_words_and_lower($obj_array[$key + 1]['title'], $words_to_remove = "cell");
+          var_dump($second);
+          similar_text($first, $second, $percent);
+          $compare_percent_titles[$key] = $percent;
+        }
+
+        return $compare_percent_titles; //answer is an array of percent
+
+    }
+
+    public function compare_price_lineal($obj_array, $items_array_to_compare){
+
+      foreach ($items_array_to_compare as $key => $value) {
+
+          //$percent = 100 - 100*abs($obj_array[0]['price'] - $obj_array[$key + 1]['price'])/$obj_array[0]['price'] it could be another method;
+
+          $percent = 100/($obj_array[$key + 1]['price']/$obj_array[0]['price']);
+          if ($percent > 100){$percent = 100/($obj_array[0]['price']/$obj_array[$key + 1]['price']);}
+          $compare_percent_prices[$key] = $percent ;
+          var_dump($obj_array[0]['price']);
+          var_dump($obj_array[$key + 1]['price']);
+        }
+
+        return $compare_percent_prices; //answer is an array of percent
+        
+    }
+
+    public function compare_title_preg_match($obj_array, $items_array_to_compare, $remove_words_relatedto = null){
+
+      $options_save = array();
+
+      $first = $this -> remove_words_and_lower($obj_array[0]['title'], $words_to_remove = "cell");
+      
+      $portions = explode(" ", $first);
+      $m = 0;
+
+      var_dump("It has a number of words equal to:");
+      var_dump(count($portions));
+      var_dump($portions);
+
+      foreach ($items_array_to_compare as $i => $value) {
+        //$i goes from 0 to 50
+        $second = $this -> remove_words_and_lower($obj_array[$i + 1]['title'], $words_to_remove = "cell");
+        $k = 0;
+        //var_dump("word to compare");
+        //var_dump($second);
+
+        foreach ($portions as $j => $value) {
+          
+          preg_match("/" . $portions[$j] . "/", $second, $matches, PREG_OFFSET_CAPTURE);
+
+          if ($matches[0] !== null) {
+           
+          $k = $k+1;
+          
+          } // compare every word there is in $second
+          else {break;} //with a single mistake, it jumps to compare with another title
+
+          if ($k == count($portions)) {
+
+          var_dump("match was found!"); 
+          $result[$m] = $obj_array[$i + 1];
+          
+          $m = $m + 1;
+
+          }
+        }
+      }
+
+      return $result; //answer: an array of size from 0 to 50 with the full body of the items that match the name of the item to compare
+    }
+
+    public function compare_title_preg_match_title_input($title_base, $titles_array_to_compare, $option_match = array(), $remove_words_relatedto = null)
+    {
+
+      $first = $this -> remove_words_and_lower($title_base, $words_to_remove = $remove_words_relatedto);
+
+      $portions = explode(" ", $first);
+
+      $m = 0;
+
+      //var_dump("It has a number of words equal to:");
+      //var_dump(count($portions));
+      //var_dump($portions);
+
+      foreach ($titles_array_to_compare as $i => $value) {
+        // var_dump("It has a number of words equal to:");
+        //var_dump(count($portions));
+
+        //$i goes from 0 to 50
+
+        //var_dump($i);
+
+        $second = $this -> remove_words_and_lower($titles_array_to_compare[$i], $words_to_remove = $remove_words_relatedto);
+        $k = 0;
+
+        //var_dump("word to compare");
+        //var_dump($second);
+
+        foreach ($portions as $j => $value) {
+
+          $matches[0] = null;
+          
+          preg_match("/" . $portions[$j] . "/i", $second, $matches, PREG_OFFSET_CAPTURE); // ¨i¨ 
+
+          //var_dump($matches);
+
+          if (empty($matches[0])) {
+             $result_position[$i] = false;  
+             break;
+          }
+          else {
+            $k = $k+1;
+          }
+
+          /*
+          if ($matches[0] != null) {
+           //
+          $k = $k+1;
+          
+          } // compare every word there is in $second
+          else {
+          $result_position[$i] = false;  
+          break;
+          } //with a single mistake, it jumps to compare with another title
+          */
+
+          if ($k == count($portions)) {
+
+          var_dump("match was found!"); 
+          $result[$m] = $titles_array_to_compare[$i];
+
+          $result_position[$i] = true;
+          
+          $m = $m + 1;
+
+          }
+        }    
+      }
+
+      if ((array_key_exists('return_position_match',  $option_match) &&   $option_match['return_position_match'] == true))
+        { 
+         //1 de diciembre me quede por aca testear toda esta funciòn.
+
+          return $result_position;
+
+        }
+        else{
+          return $result; //answer: an array of size from 0 to 50 with titles of the items that match the name of the item to items_array_to_compare
+
+        }
+    }  
+
+    public function remove_words_and_lower($subjet, $words_to_remove = array()){
+
+      //Pendiente se puede adicionar una variable que traduzca
+
+      if ($words_to_remove == "colores") {
+        $words_to_remove = array('negro', 'azul', 'marron', 'marrón', 'gris', 'verde', 'naranja', 'rosa', 'purpura', 'púrpura', 'rojo', 'blanco', 'amarillo', 'carbón', 'carbon');
+      }
+      elseif ($words_to_remove == "cell") {
+        $words_to_remove = array('color', 'negro', 'azul', 'marron', 'marrón', 'gris', 'verde', 'naranja', 'rosa', 'purpura', 'púrpura', 'rojo', 'blanco', 'amarillo', 'carbón', 'carbon', 'oscuro', 'océano', 'oceano', 'nuevo', 'caja sellada', 'desbloqueado', 'original', 'nacional', 'sellado', 'nacional sellado', '100% sellado','libre', 'liberado', 'super', 'super precio','regalo', '+4 regalos','+3 regalos','+2 regalos','+1 regalo','factura', '1 año', '2 años', '3 años', 'a', 'ante', 'bajo', 'cabe', 'con', 'contra', 'de', 'desde', 'durante', 'en', 'entre', 'hacia', 'hasta', 'mediante', 'para', 'por', 'según', 'sin', 'so', 'sobre', 'tras', 'versus', 'vía');
+      }
+      else{
+        $words_to_remove = array(); //Pendiente need to be tested
+      }
+
+      $subjet = preg_replace('/\s\s+/', ' ', $subjet); //Remove the remaining blanks spaces
+
+      $subjet = strtolower($subjet); //All in lowercase
+      $words = explode(" ", $subjet); //convert from string to array
+
+      foreach ($words as $i) {
+        foreach ($words_to_remove as $j) {
+          if ($i === $j) {
+            $replace = "/" . $i . "/";
+            $subjet = preg_replace($replace, ' ', $subjet); //returns the whole sentence lowercase 
+          }
+        }
+      }
+
+      $subjet = preg_replace('/\s\s+/', ' ', $subjet); //Remove the remaining blanks spaces
+
+      return $subjet;
+    }
+    
+}
