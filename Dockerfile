@@ -8,6 +8,6 @@ RUN mkdir /app \
  && mkdir /app/moe-php-mysql-demo \
  && mkdir /app/moe-php-mysql-demo/www
 
-COPY wamp64/www/cursoPHP/mercadolibre_comparador_web/ /app/moe-php-mysql-demo/www/
+COPY www/ /app/moe-php-mysql-demo/www/
 
 RUN cp -r /app/moe-php-mysql-demo/www/* /var/www/html/.
