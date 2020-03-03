@@ -4,7 +4,10 @@
  * data_extractor_model
  */
 
-ini_set('memory_limit', '4095M'); // or you could use 4G
+//ini_set('memory_limit', '4095M'); // or you could use 4G
+
+ini_set('memory_limit', '-1'); //unlimited 
+ini_set('max_execution_time', 0); //unlimited 
 
 //  ** Input **  /
 
@@ -80,14 +83,14 @@ ini_set('memory_limit', '4095M'); // or you could use 4G
 
 //  *  // new method
 
-$min_children_category = 2;
-$max_children_category = 3;
+$min_children_category = 4;
+$max_children_category = 5;
 
 $start_time = microtime(true);
 
 $cousin_and_total_items = $meli -> comparison_model_prepare_to_getfeatures_v2($min_children_category, $max_children_category, $plus= null, $force_calculation_under_1000 = true, $country_base = "MLM");
 
-$meli -> get_items_features_unified_v2($min_children_category, $max_children_category, $cousin_and_total_items["category_cousins"], $country_base = "MLM");
+$meli -> get_items_features_unified_v2($min_children_category, $max_children_category, $cousin_and_total_items["items_to_get_features"], $cousin_and_total_items["category_cousins"], $country_base = "MLM");
 
 $end_time = microtime(true);
 

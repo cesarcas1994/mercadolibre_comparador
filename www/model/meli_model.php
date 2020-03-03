@@ -26,14 +26,14 @@ class Meli
     //Pendiente quitar dependendencia de país y poner el pais como variable
     protected static $GET_ARTICLES_URL = "https://api.mercadolibre.com/sites/MLM/search?category=";
     protected static $GET_FULL_ARTICLE_URL = "https://api.mercadolibre.com/items/";
-    protected static $SAVE_ARTICLES_DIR_Computacion = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Computacion/";
-    protected static $SAVE_ARTICLES_DIR_Inactive_Computacion = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Inactive/Computacion/";
-    protected static $SAVE_ARTICLES_DIR_Cajas_de_Dirección = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Accesorios para Vehículos/Refacciones Autos y Camionetas/Suspensión y Dirección/Cajas de Dirección/";
-     protected static $SAVE_ARTICLES_DIR_Suspensión_y_Dirección = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Accesorios para Vehículos/Refacciones Autos y Camionetas/Suspensión y Dirección/";
-    protected static $SAVE_ARTICLES_DIR_Ropa_Bolsas__Calzado = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Ropa_Bolsas__Calzado/";
-    protected static $SAVE_ARTICLES_PRUEBA_EXPANSION = "wamp64/www/cursoPHP/mercadolibre_comparador/data/prueba_expansion/Suspensión y Dirección/";
-    protected static $SAVE_ARTICLES = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Modeloprediccion/";
-    protected static $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+    //protected static $SAVE_ARTICLES_DIR_Computacion = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Computacion/";
+    //protected static $SAVE_ARTICLES_DIR_Inactive_Computacion = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Inactive/Computacion/";
+    //protected static $SAVE_ARTICLES_DIR_Cajas_de_Dirección = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Accesorios para Vehículos/Refacciones Autos y Camionetas/Suspensión y Dirección/Cajas de Dirección/";
+    // protected static $SAVE_ARTICLES_DIR_Suspensión_y_Dirección = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Accesorios para Vehículos/Refacciones Autos y Camionetas/Suspensión y Dirección/";
+    //protected static $SAVE_ARTICLES_DIR_Ropa_Bolsas__Calzado = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Ropa_Bolsas__Calzado/";
+    //protected static $SAVE_ARTICLES_PRUEBA_EXPANSION = "wamp64/www/cursoPHP/mercadolibre_comparador/data/prueba_expansion/Suspensión y Dirección/";
+    //protected static $SAVE_ARTICLES = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Modeloprediccion/";
+    //protected static $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
 
     //Pendiente Demasiadas variables ->modificar poner en variable de funcion
     //Pendiente Arreglar todo el modelo de salvado no es lo suficientemente claro
@@ -1926,7 +1926,10 @@ class Meli
 
         $local_file = 'categoriesMLM.json';
 
-        $local = file_get_contents("D:/mercadolibre_data/" . $local_file);
+        //$local = file_get_contents("D:/mercadolibre_data/" . $local_file);
+        //$local = file_get_contents("./" . $local_file, FILE_USE_INCLUDE_PATH);
+        
+        $local = file_get_contents(__DIR__ . "/../categoriesMLM.json");
 
         $obj = json_decode($local, $assoc = true);
         
@@ -2161,7 +2164,9 @@ class Meli
 
       $local_file = 'categoriesMLM.json';
 
-      $local = file_get_contents("D:/mercadolibre_data/" . $local_file);
+      //$local = file_get_contents("D:/mercadolibre_data/" . $local_file);
+      //$local = file_get_contents("./" . $local_file, FILE_USE_INCLUDE_PATH);
+      $local = file_get_contents(__DIR__ . "/../categoriesMLM.json");
 
       $obj = json_decode($local, $assoc=true);
       $obj_num = array_values($obj);
@@ -2318,14 +2323,17 @@ class Meli
           $cousin_and_total_items["total_items"] = $total_items_Latinoamerica;
 
           $save_category = $country_base_category;
-          $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
 
-          $dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . '_predictor.json';
+          $cousin_and_total_items["items_to_get_features"][$save_category] = $result_category_items;
 
-          var_dump("dir_save");
-          var_dump($dir_save);
+          //$DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
 
-          $this -> save_json($result_category_items, $dir_save);
+          //$dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . '_predictor.json';
+
+          //var_dump("dir_save");
+          //var_dump($dir_save);
+
+          //$this -> save_json($result_category_items, $dir_save);
           unset($result_category_items);
         }
 
@@ -2337,7 +2345,7 @@ class Meli
       
     }
 
-    public function get_items_features_unified_v2($min_children_category, $max_children_category, $category_cousins, $country_base){
+    public function get_items_features_unified_v2($min_children_category, $max_children_category, $items_to_get_features, $category_cousins, $country_base){
 
       $start_time = microtime(true);
 
@@ -2346,7 +2354,7 @@ class Meli
         foreach ($category_cousins as $country_base_category => $value) {
           
           $local_file = $country_base_category . "_predictor";
-          $result_general_category_items = $this -> load_json("predictorMachineLearning/" . $local_file . ".json");
+          $result_general_category_items = $items_to_get_features[$country_base_category];
 
           foreach ($result_general_category_items as $country_id => $value) {
             
@@ -2392,13 +2400,13 @@ class Meli
       
       $save_category = $category_id;
 
-      $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
-      $dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . 'features_predictor.json';
+      //$DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+      //$dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . 'features_predictor.json';
 
-      var_dump("dir_save");
-      var_dump($dir_save);
+      //var_dump("dir_save");
+      //var_dump($dir_save);
 
-      $this -> save_json($body, $dir_save);
+      //$this -> save_json($body, $dir_save);
       
       //load features archive
       
@@ -2484,13 +2492,13 @@ class Meli
       $step = analysis::get_category_predictor($title_search, $country_base);
       $save_category = $step["id"];
 
-      $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
-      $dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . '_predictor.json';
+      //$DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+      //$dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . '_predictor.json';
 
-      var_dump("dir_save");
-      var_dump($dir_save);
+      //var_dump("dir_save");
+      //var_dump($dir_save);
 
-      $this -> save_json($result_general_category_items, $dir_save);
+      //$this -> save_json($result_general_category_items, $dir_save);
 
       $end_time = microtime(true);
 
@@ -2550,13 +2558,13 @@ class Meli
       
       $save_category = $step["id"];
 
-      $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
-      $dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . 'features_predictor.json';
+      //$DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+      //$dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . 'features_predictor.json';
 
-      var_dump("dir_save");
-      var_dump($dir_save);
+      //var_dump("dir_save");
+      //var_dump($dir_save);
 
-      $this -> save_json($body, $dir_save);
+      //$this -> save_json($body, $dir_save);
       
       //load features archive
       
