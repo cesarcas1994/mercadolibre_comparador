@@ -80,7 +80,7 @@ $Celulares_y_Smartphones = "MLM1055";
 //$user = post::create_test_user("MLM");
 //var_dump($user);
 
-
+/*
 $result_Cafe_Serrano  = post::create_item("Cafe Serrano Cubano 1kg Molido", "MLM2354", 640, "MXN", 2, "buy_it_now", "gold_special", "new", "Un café especial para iniciar el día", "YOUTUBE_ID_HERE", "Sellados.", $pictures_url_array = array('http://www.bazar-virtual.cu/images/prod_images/20941_20150218111405.jpg'));
 
 $result_test = post::create_item("Item de test - No Ofertar", "MLM2354", 10, "MXN", 1, "buy_it_now", "gold_special", "new", "Item de test - No Ofertar", null, "Sellados.", $pictures_url_array = array('http://mla-s2-p.mlstatic.com/968521-MLA20805195516_072016-O.jpg'));
@@ -90,6 +90,7 @@ var_dump($result_Cafe_Serrano);
 $validador = post::validator_item($body = $result_Cafe_Serrano ); 
 
 var_dump($validador);
+*/
 
 //post::match_item_bycategory("MLM2354");
 
@@ -160,12 +161,31 @@ $change_to_array = $Name_coin = array(
 
 // Store it as a . PDF file in the filesystem
 
-/** Get articles total 
+// Get articles total 
 
-$meli -> get_articles_total($cargada_categoria, 50, $options_work_and_save = array("dont_save" => true));
-$meli -> save_error($save = false);// $save=false It is equivalent to working errors
+//$meli -> get_articles_total($cargada_categoria, 50, $options_work_and_save = array("dont_save" => true));
+//$meli -> save_error($save = false);// $save=false It is equivalent to working errors
 
-*/
+$result = analysis::get_category_by_ranking_search("rasuradora electrica", $country_id = "MCO");
+
+var_dump("test get_category_by_ranking_search");
+var_dump($result);
+
+$item_ids_array = $meli -> get_articles_total_v2($otra_categoria , $total_articles = null, $limit = 50, $country_id = "MLM", $plus = null, $force_calculation_under_1000 = false);
+
+var_dump("item_ids_array");
+var_dump($item_ids_array);
+
+//test get_item_time_active
+
+$result = $meli -> get_full_article_array($item_ids_array);
+
+foreach ($result as $key => $value) {
+  $time_created_array[$key] = $result[$key]["date_created"];
+  $healt_array[$key] = $result[$key]["health"];
+}
+
+$item_time_active_array = $meli -> get_item_time_active_array($time_created_array, $time_parameter = "days", $healt_array);
 
 //Test sold_quantity
 

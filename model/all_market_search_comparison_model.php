@@ -4,19 +4,42 @@
  *all_market_search_comparison_model
  */
 
+ini_set('memory_limit', '4095M'); // or you could use 1G
+
 //  ** Input **  /
 
-$title_type = "Rasuradora Eléctrica";
-$title_brand = "Qp2510/10";
-$title_model = "Repuesto Cuchilla Oneblade";
-$title_plus = "";
+//$title_type = "Impercaucho Impermeabilizante 12 Años";
+//$title_brand = "Terracota";
+//$title_model = "19 Lts";
+//$title_plus = "";
+
+//Impercaucho Impermeabilizante 12 Años Terracota 19 Lts
+
+//$title_type = "Croquetas Alimento Perro Raza Mediana Cachorro";
+//$title_brand = "Nupec";
+//$title_model = "20 Kg";
+//$title_plus = "";
+
+//Croquetas Alimento Perro Raza Mediana Cachorro 20 Kg Nupec
+
+//$title_type = "Placa Metálica Con 2 Contactos Aterrizados";
+//$title_brand = "Ad-4677";
+//$title_model = "Adir";
+//$title_plus = "";
+
+//Placa Metálica Con 2 Contactos Aterrizados Ad-4677 Adir
+
+//$title_type = "Rasuradora Eléctrica";
+//$title_brand = "Qp2510/10";
+//$title_model = "Repuesto Cuchilla Oneblade";
+//$title_plus = "";
 
 //Rasuradora Eléctrica Qp2510/10 + Repuesto Cuchilla Oneblade
 
-//$title_type = "Soldadora Inversora Máquina";
-//$title_brand = "Redbo";
-//$title_model = "Mma-130";
-//$title_plus = "";
+$title_type = "Soldadora Inversora Máquina";
+$title_brand = "Redbo";
+$title_model = "Mma-130";
+$title_plus = "";
 
 //Soldadora Inversora Máquina 127 Amp Mma-130 Redbo
   
@@ -33,7 +56,7 @@ $title_plus = "";
 //1 Guía Prepagada Día Siguiente Dhl 1kg + Recolección Gratis
 
 //$title_type = "cafe";
-//$title_brand = "serrano";
+//$title_brand = "serrano 500 gramos";
 //$title_model = "";
 //$title_plus = "";
 
@@ -43,10 +66,162 @@ $title_search = preg_replace('/\s\s+/', ' ', $title_search); //Remove the remain
 $title_search = trim($title_search);
 var_dump($title_search);
 $image_link_search = "http://mlm-s1-p.mlstatic.com/757141-MLM31369084668_072019-O.jpg";
+$country_base = "MLM";
 
 //  *  //
 
 $start_time = microtime(true);
+
+// download items object before get features 
+
+///////////  items general competition ///////////////
+/*
+$result_general_category_items = $meli -> category_generalitems_search($title_type, $title_brand, $title_model, $title_plus, $plus = null, $force_calculation_under_1000 = true, $country_base);
+
+//$result_local_category_items = $meli -> category_localitems_search($title_type, $title_brand, $title_model, $title_plus, $plus, $country_id = "MLM", $force_calculation_under_1000 = false);
+
+//$result_general_category_items["MLM"] = $result_local_category_items;
+
+$step = analysis::get_category_predictor($title_search, $country_base);
+$save_category = $step["id"];
+
+$DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+$dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . '_predictor.json';
+
+var_dump("dir_save");
+var_dump($dir_save);
+
+$meli -> save_json($result_general_category_items, $dir_save);
+*/
+/*
+foreach ($result_general_category_items as $country => $value) {
+	var_dump("test first element");
+	var_dump($result_general_category_items[$country][0]);
+	var_dump("count");
+	var_dump(count($result_general_category_items[$country]));
+
+	foreach ($result_general_category_items[$country] as $key => $value) {
+	 	$title_existing[$country][$key] = $result_general_category_items[$country][$key]["id"];
+	} 
+
+	var_dump("$title_existing before array_unique");
+	var_dump($title_existing);
+
+	$title_existing_output = array_unique($title_existing); //Remove duplicate values ​​from an array
+
+	var_dump("$title_existing after array_unique");
+	var_dump($title_existing_output);
+}
+*/
+/*
+$result_general_category_items = $meli -> load_json("predictorMachineLearning/MLM120103_predictor.json");
+
+foreach ($result_general_category_items as $country_id => $value){
+			
+	if ($result_general_category_items[$country_id] == null) {
+		continue;
+	}
+	else{
+
+		$items_features_category_items_country = $meli -> get_items_features($result_general_category_items[$country_id], $features_to_obtain = null, $country_id);
+
+	}
+
+	//push an array of category_items, ex: A + AB + ABC ...
+	if($items_features_category_items != null){
+		foreach ($items_features_category_items_country as $key => $value) {
+			array_push($items_features_category_items, $items_features_category_items_country[$key]);
+		}
+	}
+	else{
+		$items_features_category_items = $items_features_category_items_country;
+	}
+}
+*/
+/*
+$items_features_category_items_country = $meli -> get_items_features($result_general_category_items["MLM"], $features_to_obtain = null, $country_id = "MLM");
+
+$items_features_category_items = $items_features_category_items_country;
+*/
+//$items_features_competition = $items_features_category_items;
+
+///////////  items general competition ///////////////
+
+//$expansion_method == "total_items_competition"
+//$expansion_method = "primary_results_items_competition"
+/*
+$result_general_competition = $meli -> custom_generalcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus = null, $return_object = true, $expansion_method = "primary_results_items_competition");
+
+foreach ($result_general_competition as $country_id => $value) {
+	if ($result_general_competition[$country_id] == null) {
+		continue;
+	}
+	else{
+		var_dump("items_features_competition country");
+		var_dump($country_id);
+
+			//equal name of items for $expansion_method = "primary_results_items_competition"
+			foreach ($result_general_competition[$country_id] as $key => $value) {
+				$result_general_competition[$country_id][$key]["title"] = $title_type . " " . $title_brand;
+			}	
+
+		$items_features_competition_country = $meli -> get_items_features($result_general_competition[$country_id], $features_to_obtain = null, $country_id);
+	}
+
+	//push an array of competition items, ex: A + AB + ABC ...
+	if($items_features_competition != null){
+		foreach ($items_features_competition_country as $key => $value) {
+			array_push($items_features_competition, $items_features_competition_country[$key]);
+		}
+	}
+	else{
+		$items_features_competition = $items_features_competition_country;
+	}
+	
+}
+
+var_dump("primary_results_items_competition");
+var_dump($items_features_competition);
+*/
+///////////  items competition only country base total articles match category///////////////
+/*
+$result_general_competition = $meli -> custom_localcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus = null, $country_id = "MLM", $return_object = true, $expansion_method = "total_items_competition_match_category");
+
+$items_features_competition_total_articles = $meli -> get_items_features($result_general_competition, $features_to_obtain = null, $country_id = "MLM");
+
+//var_dump($items_features_competition_total_articles);
+
+if($items_features_competition != null){
+	foreach ($items_features_competition_total_articles as $key => $value) {
+		array_push($items_features_competition, $items_features_competition_total_articles[$key]);
+	}
+}
+else{
+	$items_features_competition = $items_features_competition_total_articles;
+}
+var_dump("total_items_competition_match_category");
+var_dump($items_features_competition);
+*/
+///////////  items competition only country base total articles without match category///////////////
+
+$result_general_competition = $meli -> custom_localcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus = null, $country_id = "MLM", $return_object = true, $expansion_method = "total_items_competition");
+
+$items_features_competition_total_articles = $meli -> get_items_features($result_general_competition, $features_to_obtain = null, $country_id = "MLM");
+
+//var_dump($items_features_competition_total_articles);
+
+if($items_features_competition != null){
+	foreach ($items_features_competition_total_articles as $key => $value) {
+		array_push($items_features_competition, $items_features_competition_total_articles[$key]);
+	}
+}
+else{
+	$items_features_competition = $items_features_competition_total_articles;
+}
+var_dump("total_items_competition");
+var_dump($items_features_competition);
+
+/////////////////////////////  old code //////////////////////////////////////////////////////////
 
 ///////////  items general match  Incomplete! ///////////////
 
@@ -84,81 +259,7 @@ $items_features_match = $meli -> get_items_features($result_match["MLM"], $featu
 var_dump($items_features_match); 
 */
 
-///////////  items general competition ///////////////
 
-//$expansion_method == "total_items_competition"
-//$expansion_method = "primary_results_items_competition"
-
-$result_general_competition = $meli -> custom_generalcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus = null, $return_object = true, $expansion_method = "primary_results_items_competition");
-
-foreach ($result_general_competition as $country_id => $value) {
-	if ($result_general_competition[$country_id] == null) {
-		continue;
-	}
-	else{
-		var_dump("items_features_competition country");
-		var_dump($country_id);
-
-			//equal name of items for $expansion_method = "primary_results_items_competition"
-			foreach ($result_general_competition[$country_id] as $key => $value) {
-				$result_general_competition[$country_id][$key]["title"] = $title_type . " " . $title_brand;
-			}
-
-		$items_features_competition_country = $meli -> get_items_features($result_general_competition[$country_id], $features_to_obtain = null, $country_id);
-	}
-
-	//push an array of competition items, ex: A + AB + ABC ...
-	if($items_features_competition != null){
-		foreach ($items_features_competition_country as $key => $value) {
-			array_push($items_features_competition, $items_features_competition_country[$key]);
-		}
-	}
-	else{
-		$items_features_competition = $items_features_competition_country;
-	}
-	
-}
-
-var_dump("primary_results_items_competition");
-var_dump($items_features_competition);
-
-///////////  items competition only country base total articles match category///////////////
-
-$result_general_competition = $meli -> custom_localcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus = null, $country_id = "MLM", $return_object = true, $expansion_method = "total_items_competition_match_category");
-
-$items_features_competition_total_articles = $meli -> get_items_features($result_general_competition, $features_to_obtain = null, $country_id = "MLM");
-
-//var_dump($items_features_competition_total_articles);
-
-if($items_features_competition != null){
-	foreach ($items_features_competition_total_articles as $key => $value) {
-		array_push($items_features_competition, $items_features_competition_total_articles[$key]);
-	}
-}
-else{
-	$items_features_competition = $items_features_competition_total_articles;
-}
-var_dump("total_items_competition");
-var_dump($items_features_competition);
-
-///////////  items competition only country base total articles without match category///////////////
-
-$result_general_competition = $meli -> custom_localcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus = null, $country_id = "MLM", $return_object = true, $expansion_method = "total_items_competition");
-
-$items_features_competition_total_articles = $meli -> get_items_features($result_general_competition, $features_to_obtain = null, $country_id = "MLM");
-
-//var_dump($items_features_competition_total_articles);
-
-if($items_features_competition != null){
-	foreach ($items_features_competition_total_articles as $key => $value) {
-		array_push($items_features_competition, $items_features_competition_total_articles[$key]);
-	}
-}
-else{
-	$items_features_competition = $items_features_competition_total_articles;
-}
-var_dump("total_items_competition");
-var_dump($items_features_competition);
 
 ///////////  items competition ///////////////
 
@@ -172,6 +273,10 @@ $result_competition = $meli -> custom_localcompetition_search($title_type, $titl
 
 $items_features_competition = $meli -> get_items_features($result_competition, $features_to_obtain = null, $country_id = "MLM");
 */
+
+/////////////////////////////  Finish old code! ///////////////////////////////////////////////////
+
+
 // union match + competition
 
 var_dump("sizeof($items_features_match)");
@@ -197,29 +302,32 @@ else{
 	//$Azure_csvtoAzureBlob = "https://predictmarket.azurewebsites.net/api/csvtoAzureBlob?code=Pg/fHaGClE2oIq5u7OY38eXabo8L0aezCYJ5fhTjYuGQPmI3Rc03aA==";
 
 	// 2- option activated
-	$Azure_csvtoAzureBlob = "https://mlconexionmeli.azurewebsites.net/api/HttpTrigger1?code=deYE0N2XNekqsMiGYOXYDKnrNtppVQfnBNhXfF/nN1psdC9IQwXaLA==";
+	$Azure_csvtoAzureBlob = "https://mlconexionmeli.azurewebsites.net/api/csvtoAzureBlob?code=xMNGNalSwHfaSpdkyfD/5lcvqftl8wBAfl7PKtX5qrQbyUsYmSqasQ==";
 
+	$Azure_logicApps_TrainingMachineLearning = "https://prod-19.centralus.logic.azure.com:443/workflows/96e3d6f34edc43be849ae7304c8fedf7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=9rcOZAumI5eJy7kJEIK7ylJPIUkxN9LNNRnJAnogYZU";
+
+	$step = analysis::get_category_predictor($title_search, $country_base);
+	//$match_category = $step["id"];
+	$match_category = "table";
 	
-
 	$body = array(
-		"items" => $items_features_match
+		"items" => $items_features_match,
+		"category_id" => $match_category
 	);
+	
+	$save_category = $step["id"];
 
-	/*
-	$body = array(
-		"items" => array(
-			0 => array(
-          "title" => "Cafe Serrano",
-          "site_id" => "MLM",
-          "price" => "645",
-          "ranking" => 43,
-          "conversion" => 0.025,
-          "condition" => "new",
-          "listing_type_id" => "gold_special",
-          "sold_quantity_for_days" => 0.346
-        ),
-	));
-	*/
+	$DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+	$dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . 'features_predictor.json';
+
+	var_dump("dir_save");
+	var_dump($dir_save);
+
+	$meli -> save_json($body, $dir_save);
+	
+	//load features archive
+	
+	//$body = $meli -> load_json("predictorMachineLearning/MLM1077features_predictor.json");
 
 	var_dump("antes de json_encode");
 	var_dump($body);
@@ -260,9 +368,10 @@ else{
 	    // revisar si es necesario que este en true 
 	    //CURLOPT_SSL_VERIFYPEER => true,
 	    CURLOPT_SSL_VERIFYPEER => false,
-	    CURLOPT_CONNECTTIMEOUT => 10, 
+	    //CURLOPT_CONNECTTIMEOUT => 10, 
+	    CURLOPT_CONNECTTIMEOUT => 0, 
 	    CURLOPT_RETURNTRANSFER => 1, 
-	    CURLOPT_TIMEOUT => 60
+	    CURLOPT_TIMEOUT => 300
 	);
 
 	$opts = array(

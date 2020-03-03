@@ -83,6 +83,16 @@ class Analysis extends Meli
 		
 	} 
 
+    public static function format_yyyy_mm_dd($time_array)
+    {
+        foreach ($time_array as $key => $value) {
+            $portions = explode("T", $time_array[$key]);
+            $time_array_format_yyyy_mm_dd[$key] = $portions[0];
+        }
+
+        return $time_array_format_yyyy_mm_dd;
+    }
+
     public static function traduce_to_pt($input_text){
 
         //Pendiente pasar todo el rollo curl post a clase post y simplificar la clase analysis
@@ -150,6 +160,32 @@ class Analysis extends Meli
         $pt_text = $body_response[0]["translations"][0]["text"];
 
         return $pt_text;
+    }
+
+    public static function traduce_to_pt_v2($input_text_array){
+
+      $Azure_translateText = "https://mlconexionmeli.azurewebsites.net/api/translateText?code=Yv7pN8h8LjmuJZnxFf7lUgZsz0teX5dHA9aiajlaarSGrAyoxXLBBw==";
+
+      foreach ($input_text_array as $key => $value) {
+        
+        $input_text_array[$key] = analysis::separator_search($input_text_array[$key]);
+        $url_array[] = $Azure_translateText . "&text=" . $input_text_array[$key];
+      }
+
+      //var_dump($url_array);
+      
+      $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+      
+      foreach ($json_array as $key => $value) {
+          $obj[$key] = json_decode($json_array[$key], $assoc = true);
+      }
+      
+      foreach ($obj as $key => $value) {
+          $pt_text_array[$key] = $obj[$key][0]["translations"][0]["text"];
+      }
+
+      return $pt_text_array;
+      
     }
 
     public static function time_trigger_data($time){
@@ -480,6 +516,22 @@ class Analysis extends Meli
         return $obj;
     }
 
+    public static function custom_search_array_v2($search_title_array, $plus, $country){
+
+        foreach ($search_title_array as $key => $value) {
+            $search_title_array[$key] = analysis::separator_search($search_title_array[$key]);
+            $url_array[] = "https://api.mercadolibre.com/sites/" . $country . "/search?q=" . $search_title_array[$key] . $plus;
+        }
+
+        $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+
+        foreach ($json_array as $key => $value) {
+            $obj[$key] = json_decode($json_array[$key], $assoc = true);
+        }
+
+        return $obj;
+    }
+
     public static function get_seller($seller_id_array){
 
         foreach ($seller_id_array as $key) {
@@ -534,6 +586,22 @@ class Analysis extends Meli
         $json = curl::file_get_contents_curl($url, $options = array(CURLOPT_SSL_VERIFYPEER => false));
 
         $obj = json_decode($json, true);
+
+        return $obj;
+
+    }
+
+    public static function opinions_item_array($item_ids_array){
+
+        foreach ($item_ids_array as $key) {
+                $url_array[] = self::$GET_REVIEWS_URL . $key;
+        } 
+
+        $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+            
+        foreach ($json_array as $key => $value) {
+            $obj[$key] = json_decode($json_array[$key], $assoc = true);
+        }
 
         return $obj;
 
@@ -656,6 +724,21 @@ class Analysis extends Meli
 
     }
 
+    public static function at_least_one_word_comparation($first_title, $second_title){
+
+        $portions1 = explode(" ", $first_title);
+        $portions2 = explode(" ", $second_title);
+
+        if(array_intersect($portions1, $portions2) != null){
+            $response = true; 
+        }
+        else{
+            $response = false;
+        }
+        
+        return $response;
+    }
+
     public static function available_filters($available_filters, $filter_option = array()){
 
         //Take from $available_filters whitch information you want, It was created with the objective of ensuring that the desired filter is obtained since there are times that it is not registered in the same order
@@ -697,6 +780,35 @@ class Analysis extends Meli
        return $nickname;
     }
 
+    public static function get_category_features($category_id){
+
+      $url = self::$GET_CHILDREN_URL . $category_id;
+
+      $json = curl::file_get_contents_curl($url, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+       
+      $obj = json_decode($json, $assoc = true);
+
+      return $obj;
+    }
+
+    public static function get_category_by_ranking_search($title, $country_id){
+
+       $obj = analysis::custom_search($title, "&limit=1", $country_id, $pass_access_token = false);    
+
+       $predicted_category = $obj["results"][0]["category_id"];
+
+       //testing
+
+       var_dump("item_to_search_category");
+       var_dump($obj["results"][0]["title"]);
+
+        $category_features = analysis::get_category_features($predicted_category);
+
+        var_dump($category_features["path_from_root"]);
+
+       return $predicted_category;
+    }
+
     public static function get_category_predictor($title, $country_id){
 
         //https://api.mercadolibre.com/sites/MLB/category_predictor/predict?title=Ipod
@@ -709,10 +821,65 @@ class Analysis extends Meli
 
         $obj = json_decode($json, true);
 
-        $predicted_category = $obj["id"];
+        // main features
+
+        $predicted_category["id"] = $obj["id"];
+        $predicted_category["name"] = $obj["name"];
+
+        //secondary features
+       
         $prediction_probability = $obj["prediction_probability"];
 
+        $path_from_root = "";
+        foreach ($obj["path_from_root"] as $key => $value) {
+            if ($key == count($obj["path_from_root"]) - 2) {continue;} //delete the penultimate predicted category to improve the subsequent search procedure
+
+            $portion = $obj["path_from_root"][$key]["name"];
+            if ($path_from_root == "") {
+             $path_from_root = $portion;
+            }
+            else{
+             $path_from_root = $path_from_root . " " .  $portion;
+            }   
+        }
+
+        $predicted_category["full_name"] = $path_from_root;   
+
+        var_dump("category predictor : " . $country_id);
+        var_dump($path_from_root);
+        
+        var_dump($predicted_category["name"]);
+        var_dump($prediction_probability);
+        
+        /*if($prediction_probability < 0.2){
+
+            var_dump("country : " . $country_id . " title : " . $title . " does not fit in category predictor");
+            return null;
+        }*/
+
         return $predicted_category;
+    }
+
+    public static function get_category_predictor_v2($title_array, $country_id){
+
+        foreach ($title_array as $key) {
+
+          $title_search = analysis::separator_search($key);  
+          $url_array[] = "https://api.mercadolibre.com/sites/" . $country_id . "/category_predictor/predict?title=" . $title_search;
+        }
+
+        $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));  
+
+        foreach ($json_array as $key => $value) {
+           $obj[$key] = json_decode($json_array[$key], $assoc = true);
+        }
+
+        foreach ($obj as $key => $value) {
+            $predicted_category[$key]["id"] = $obj[$key]["id"];
+            $predicted_category[$key]["name"] = $obj[$key]["name"];
+        }
+
+        return $predicted_category; 
     }
 
 

@@ -25,7 +25,11 @@ $meli = new Meli;
 
 //require_once ("model/search_model.php");
 
-require_once ("model/all_market_search_comparison_model.php");
+//require_once ("model/10_biggest_seller_model.php");
+
+require_once ("model/data_extractor_model.php");
+
+//require_once ("model/all_market_search_comparison_model.php");
 
 //require_once ("model/cell_comparison_model.php");
 

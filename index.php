@@ -17,7 +17,7 @@ text-align: center;
 
 <?php
 
-require_once ("controller/meli_controller.php");
+//require_once ("controller/meli_controller.php");
 
 ?>
 

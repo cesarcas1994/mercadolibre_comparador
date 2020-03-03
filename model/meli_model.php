@@ -34,6 +34,7 @@ class Meli
     protected static $SAVE_ARTICLES_PRUEBA_EXPANSION = "wamp64/www/cursoPHP/mercadolibre_comparador/data/prueba_expansion/Suspensión y Dirección/";
     protected static $SAVE_ARTICLES = "wamp64/www/cursoPHP/mercadolibre_comparador/data/Modeloprediccion/";
     protected static $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+
     //Pendiente Demasiadas variables ->modificar poner en variable de funcion
     //Pendiente Arreglar todo el modelo de salvado no es lo suficientemente claro
     //Pendiente pensar si poner en cada función que tipo de valor devuelve esto ayuda mucho a un tercero a entender el codigo
@@ -59,6 +60,23 @@ class Meli
         }
         
         return $children_categories;
+    }   
+
+    public function get_category_object($category_array){
+
+      foreach ($category_array as $key) {
+          $url_array[] = self::$GET_CHILDREN_URL . $key;
+      }
+
+      //var_dump($url_array);
+
+      $json_array = curl::request_multiple($url_array, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+      
+      foreach ($json_array as $key => $value) {
+          $obj[$key] = json_decode($json_array[$key], $assoc = true);
+      }
+
+      return $obj;
     }
 
     public function get_articles($category)
@@ -105,7 +123,7 @@ class Meli
         return $obj;
     }
 
-    public function get_real_articles_array_country($category_array, $country_id){
+    public function get_real_articles_array_country($category_array, $country_id, $return_object = false){
       //this function return articles_array no just the search of all.
 
       $search_all = $this -> get_articles_array_country($category_array, $country_id);
@@ -114,7 +132,12 @@ class Meli
       foreach ($search_all as $number_packages => $obj) {
         foreach ($search_all[$number_packages]["results"] as $key => $value) {
 
-          $articles_array_country[] = $search_all[$number_packages]["results"][$key]["id"];                  
+          if ($return_object == true) {
+            $articles_array_country[] = $search_all[$number_packages]["results"][$key];
+          }
+          else{
+            $articles_array_country[] = $search_all[$number_packages]["results"][$key]["id"];
+          }                           
         } 
       }
 
@@ -172,7 +195,46 @@ class Meli
         return $obj;
     }
 
-    public function get_item_time_active_array($time_created_array, $time_parameter, $healt_array, $url_azure_cloud){
+    public function get_item_time_active_array($time_created_array, $time_parameter, $healt_array){
+
+      var_dump($time_created_array);
+      var_dump($healt_array);
+
+      $today_time_array_format = analysis::today($exact_time = true);
+      $today_time = $today_time_array_format['year'] . "-" . $today_time_array_format['mon'] . "-" . $today_time_array_format['mday'];
+
+      $time_created_array_format_yyyy_mm_dd = analysis::format_yyyy_mm_dd($time_created_array);
+
+      foreach ($time_created_array_format_yyyy_mm_dd as $key => $value) {
+        $diff = abs(strtotime($today_time) - strtotime($time_created_array_format_yyyy_mm_dd[$key]));
+        $years = $diff / (365*60*60*24);
+        $months = $diff / (30*60*60*24);
+        $days = $diff / (60*60*24);
+
+        switch ($time_parameter) {
+          case 'years':
+            $item_time_active_array[$key] = intval(floor($years * $healt_array[$key]));
+            break;
+          case 'months':
+            $item_time_active_array[$key] = intval(floor($months * $healt_array[$key]));
+            break;
+          case 'days':
+            $item_time_active_array[$key] = intval(floor($days * $healt_array[$key]));
+            break;           
+          default:
+           $item_time_active_array[$key] = 0;
+            break;
+        }
+      }
+
+      var_dump("get_item_time_active_array");
+      var_dump($item_time_active_array);
+
+      return $item_time_active_array;
+
+    }      
+
+    public function get_item_time_active_array_azure($time_created_array, $time_parameter, $healt_array, $url_azure_cloud){
 
       var_dump($time_created_array);
       var_dump($healt_array);
@@ -230,10 +292,66 @@ class Meli
       var_dump("sold_quantity_array");
       var_dump($sold_quantity_array);
 
+      var_dump("permalinks_array");
+      var_dump($permalinks_array);
+
       if ($permalinks_array != null) {
         
+        //Pendiente estructurar en llamadas de a 50
+        /*
+        $limit_calls = 10;
+
+        if (count($permalinks_array) > $limit_calls) {
+            //var_dump("request_multiple more than " . $limit_calls);
+
+            $total_calls = count($permalinks_array);
+
+            $portions_urls = $permalinks_array;
+
+            //var_dump("before portions_request_multiple count");
+            //var_dump($total_calls);
+
+            unset($permalinks_array);
+
+            
+            for ($j=1;  $j <= ceil($total_calls / $limit_calls); $j++)
+            {
+                //var_dump("count");
+                //var_dump($j);
+
+                foreach ($portions_urls as $key => $value) {
+                    if ($j == ceil($total_calls / $limit_calls) && ($key == $total_calls % $limit_calls)){
+                        break;
+                    }
+                    if ($key >= $limit_calls) {
+                        
+                        break;
+                    }
+                    $permalinks_array[$key] = $portions_urls[$key + ($j-1) * $limit_calls];
+                }
+
+                $portions_request_multiple = $this -> get_sold_quantity_scraping_array($permalinks_array, $url_azure_cloud);
+
+                unset($permalinks_array);
+
+                if($sold_quantity_scraping_array != null){
+                    foreach ($portions_request_multiple as $key => $value) {
+                        array_push($sold_quantity_scraping_array, $portions_request_multiple[$key]);
+                    }
+                }
+                else{
+                    $sold_quantity_scraping_array = $portions_request_multiple;
+                }
+            }         
+        }
+        else{
+            $sold_quantity_scraping_array = $this -> get_sold_quantity_scraping_array($permalinks_array, $url_azure_cloud);
+        }
+        */
+
         $sold_quantity_scraping_array = $this -> get_sold_quantity_scraping_array($permalinks_array, $url_azure_cloud);
 
+        var_dump("sold_quantity_scraping_array");
         var_dump($sold_quantity_scraping_array);
 
         foreach ($sold_quantity_scraping_array as $key => $value) {
@@ -246,6 +364,36 @@ class Meli
       } 
 
       return $sold_quantity_array;
+    }
+
+    public function string_attribute($object_array){
+
+      foreach ($object_array as $key => $value) {
+
+          $string_attribute = "";  
+          foreach ($object_array[$key]["attributes"] as $attribute => $value) {
+
+            if ($object_array[$key]["attributes"][$attribute]["value_name"] != null) {
+
+               $value_name_portion = explode(" ", $object_array[$key]["attributes"][$attribute]["value_name"]);
+
+               $value_name = implode("_", $value_name_portion);
+
+               $portion = $object_array[$key]["attributes"][$attribute]["id"] . "_" . $value_name;
+
+               if ($string_attribute == "") {
+                 $string_attribute = $portion;
+               }
+               else{
+                $string_attribute = $string_attribute . " " .  $portion;
+               }             
+            }                       
+          }
+
+          $attributes_array[$key] = $string_attribute;
+        }
+
+        return $attributes_array; 
     }
 
     public function seller_object_array($object_array){
@@ -325,23 +473,29 @@ class Meli
         foreach ($object_array as $key => $value) {
 
            $get_items_match_array[$key]["price"] = round($object_array[$key]["price"] * $currency_exchange_array[$country_id], 2);
-
-           var_dump("testing price");
-           var_dump($country_id);
-           var_dump($object_array[$key]["price"]);
-           var_dump($currency_exchange_array[$country_id]);
-           var_dump($get_items_match_array[$key]["price"]);
         }
+
+        //var_dump("testing price");
+         //var_dump($country_id);
+         //var_dump($object_array[0]["price"]);
+         //var_dump($currency_exchange_array[$country_id]);
+         //var_dump($get_items_match_array[0]["price"]);
 
       //reputation vendor
         $reputation_vendor_array = $this -> vendor_reputation_array($object_array, $want_integer = true);
         foreach ($object_array as $key => $value) {
+          if ($reputation_vendor_array[$key] === null) {
+            $reputation_vendor_array[$key] = ""; 
+          }
           $get_items_match_array[$key]["reputation_vendor"] = $reputation_vendor_array[$key];
         }
 
-      //reputation vendor
+      //vendor_sales_completed
         $seller_object = $this -> seller_object_array($object_array);
         foreach ($object_array as $key => $value) {
+          if ($seller_object[$key]["seller_reputation"]["transactions"]["completed"] === null) {
+            $seller_object[$key]["seller_reputation"]["transactions"]["completed"] = ""; 
+          }
           $get_items_match_array[$key]["vendor_sales_completed"] = $seller_object[$key]["seller_reputation"]["transactions"]["completed"];
         }
 
@@ -349,13 +503,18 @@ class Meli
         foreach ($object_array as $key => $value) {
           $get_items_match_array[$key]["logistic_type"] = $object_array[$key]["shipping"]["logistic_type"];
         }
+
+      //free_shipping
+        foreach ($object_array as $key => $value) {
+          $get_items_match_array[$key]["free_shipping"] = $object_array[$key]["shipping"]["free_shipping"];
+        }
       
       //ranking
         $ranking_item_array = $this -> get_ranking_item_array($object_array, $limit = 50, $country_id);
         foreach ($object_array as $key => $value) {
 
           //Pendiente desactivar esta caracteristica y ver porque salen esos resultados null, 18 de enero no se entiende el por que salen null se asume error de MELI
-          if ($ranking_item_array[$key] == null) {
+          if ($ranking_item_array[$key] === null) {
             $ranking_item_array[$key] = ""; 
           }
           $get_items_match_array[$key]["ranking"] = $ranking_item_array[$key];
@@ -374,18 +533,36 @@ class Meli
             var_dump($views_array);
 
         foreach ($object_array as $key => $value) {
-        $var1 = $sold_quantity_array[$key];
-        $id = $object_array[$key]["id"];
-        $var2 = $views_array[$key][$id];
-        $get_items_match_array[$key]["conversion"] = $var1/$var2;
+          if ($sold_quantity_array[$key] === null) {
+            $get_items_match_array[$key]["conversion"] = ""; 
+            continue;
+          }
+          else{
+            $var1 = $sold_quantity_array[$key];
+          }  
+          
+          $id = $object_array[$key]["id"];
+          if ($views_array[$key][$id] === null) {
+            $get_items_match_array[$key]["conversion"] = ""; 
+            continue;
+          }
+          else{
+            $var2 = $views_array[$key][$id];
+          }
+          
+          $get_items_match_array[$key]["conversion"] = $var1/$var2;
 
-        //Pendiente pasar a funcion covertir a 0 float
-        if ((is_nan($get_items_match_array[$key]["conversion"])) || (is_infinite($get_items_match_array[$key]["conversion"])) || ($get_items_match_array[$key]["conversion"] == 0)) {
-          $get_items_match_array[$key]["conversion"] = 0;
+          //Pendiente pasar a funcion covertir a 0 float
+          
+          if ((is_nan($get_items_match_array[$key]["conversion"])) || (is_infinite($get_items_match_array[$key]["conversion"])) || ($get_items_match_array[$key]["conversion"] === 0)) {
+            $get_items_match_array[$key]["conversion"] = 0;
+            $get_items_match_array[$key]["conversion"] = floatval($get_items_match_array[$key]["conversion"]);
+          }
+          
+
           $get_items_match_array[$key]["conversion"] = floatval($get_items_match_array[$key]["conversion"]);
-        }
-        var_dump('conversion');
-        var_dump($get_items_match_array[$key]["conversion"]);
+          //var_dump('conversion');
+          //var_dump($get_items_match_array[$key]["conversion"]);
         }  
 
       //condition
@@ -393,7 +570,107 @@ class Meli
           $get_items_match_array[$key]["condition"] = $object_array[$key]["condition"];
         }
 
+      // catalog_product_id   
+
+      foreach ($object_array as $key => $value) {
+        if (isset($object_array[$key]["catalog_product_id"])){
+          $get_items_match_array[$key]["catalog_product"] = true;
+        }
+        else{
+          $get_items_match_array[$key]["catalog_product"] = false;
+        }       
+      }   
+
+      //video_id
+        foreach ($object_array as $key => $value) {
+          if (isset($object_array[$key]["video"])){
+            $get_items_match_array[$key]["video"] = true;
+          }
+          else{
+            $get_items_match_array[$key]["video"] = false;
+          }       
+        }
+
+      //accept_mercadopago
+
+        foreach ($object_array as $key => $value) {
+           $get_items_match_array[$key]["accepts_mercadopago"] = $object_array[$key]["accepts_mercadopago"];
+        }
+
+      //tags
+
+        foreach ($object_array as $key => $value) {
+
+        $separated_by_commas = implode(" ", $object_array[$key]["tags"]);
+        $get_items_match_array[$key]["tags"] = $separated_by_commas;     
+        }    
+
+      //number of picture
+
+        foreach ($object_array as $key => $value) {
+          $get_items_match_array[$key]["num_pictures"] = count($object_array[$key]["pictures"]);
+        } 
+
+      //attributes
+
+        $attributes_array = $this -> string_attribute($object_array);
+
+        foreach ($object_array as $key => $value) {
+            $get_items_match_array[$key]["attributes"] = $attributes_array[$key];
+         } 
+
+      var_dump("attributes");  
+      var_dump($attributes_array);    
+
+      // reviews stars
+
+      $reviews_object = analysis::opinions_item_array($item_ids_array);
+
+      foreach ($object_array as $key => $value) {
+        $get_items_match_array[$key]["reviews_average"] = $reviews_object[$key]["rating_average"];
+      }
+
+      // reviews number
+
+      foreach ($object_array as $key => $value) {
+        $get_items_match_array[$key]["reviews_total"] = $reviews_object[$key]["paging"]["total"];
+      }
+
+      //official_store_id
+
+      foreach ($object_array as $key => $value) {
+        if (is_null($object_array[$key]["official_store_id"])){
+          $get_items_match_array[$key]["official_store"] = false;
+        }
+        else{
+          $get_items_match_array[$key]["official_store"] = true;
+        }       
+      }
+
+      //deal ids
+
+      foreach ($object_array as $key => $value) {
+        if (empty($object_array[$key]["deal_ids"])){
+          $get_items_match_array[$key]["deal_ids"] = false;
+        }
+        else{
+          $get_items_match_array[$key]["deal_ids"] = true;
+        }       
+      }
+
+      //warranty
+
+      foreach ($object_array as $key => $value) {
+        if (is_null($object_array[$key]["warranty"])){
+          $get_items_match_array[$key]["warranty"] = false;
+        }
+        else{
+          $get_items_match_array[$key]["warranty"] = true;
+        }       
+      }
+
       //listing_type_id
+
         foreach ($object_array as $key => $value) {
           $get_items_match_array[$key]["listing_type_id"] = $object_array[$key]["listing_type_id"];
         }
@@ -401,47 +678,86 @@ class Meli
       //sold_quantity_for_days
 
         // item_days_active
-        $result = $this -> get_full_article_array($item_ids_array);
+        //Pendiente valorar si es necesario hacer esta busqueda de nuevo
+        /*
+        if (($object_array[0]["date_created"] === null) || ($object_array[0]["health"] === null)) {
+          $result = $this -> get_full_article_array($item_ids_array);
 
-        foreach ($result as $key => $value) {
-          $time_created_array[$key] = $result[$key]["date_created"];
-          $healt_array[$key] = $result[$key]["health"];
+          foreach ($result as $key => $value) {
+            $time_created_array[$key] = $result[$key]["date_created"];
+            $healt_array[$key] = $result[$key]["health"];
+          }
+
+          $url_azure_cloud_time_created = "https://predictmarket.azurewebsites.net/api/itemTimecreated?code=lDYeIva/V1NnW/M8lkBeiGnpZ/OyOp53hSa9WxY5WMLGnIlpIabH1w==";
+
+          $item_time_active_array = $this -> get_item_time_active_array_azure($time_created_array, "days", $healt_array, $url_azure_cloud_time_created);
+        }
+        else{
+          foreach ($object_array as $key => $value) {
+            $time_created_array[$key] = $object_array[$key]["date_created"];
+            $healt_array[$key] = $object_array[$key]["health"];
+          }
+
+          $item_time_active_array = $this -> get_item_time_active_array($time_created_array, $time_parameter = "days", $healt_array);
+        } 
+        */
+
+        foreach ($object_array as $key => $value) {
+          $time_created_array[$key] = $object_array[$key]["date_created"];
+          $healt_array[$key] = $object_array[$key]["health"];
         }
 
-        $url_azure_cloud_time_created = "https://predictmarket.azurewebsites.net/api/itemTimecreated?code=lDYeIva/V1NnW/M8lkBeiGnpZ/OyOp53hSa9WxY5WMLGnIlpIabH1w==";
-
-        $item_time_active_array = $this -> get_item_time_active_array($time_created_array, "days", $healt_array, $url_azure_cloud_time_created);
+        $item_time_active_array = $this -> get_item_time_active_array($time_created_array, $time_parameter = "days", $healt_array);     
 
         //sold_quantity
-        if ($sold_quantity_array == null) {
+        if ($sold_quantity_array === null) {
           $sold_quantity_array = $this -> get_sold_quantity_array($object_array, $url_azure_cloud = "https://tablesoldquantity.azurewebsites.net/api/ScrapingHTTP?code=9TtiE9aIhq1apfSMbolmwZZgXOcyBXYFos0Zdn1zga2v/gaddrDBqw==");
           var_dump('sold_quantity_array');
           var_dump($sold_quantity_array);
         }
 
       foreach ($object_array as $key => $value) {
-        $var1 = $sold_quantity_array[$key];
-        $var2 = $item_time_active_array[$key];
+        if ($sold_quantity_array[$key] === null) {
+          $get_items_match_array[$key]["sold_quantity_for_days"] = ""; 
+          continue;
+        }
+        else{
+          $var1 = $sold_quantity_array[$key];
+        }
+
+        if ($item_time_active_array[$key] === null) {
+          $get_items_match_array[$key]["sold_quantity_for_days"] = ""; 
+          continue;
+        }
+        else{
+          $var2 = $item_time_active_array[$key];
+        }
+        
         $get_items_match_array[$key]["sold_quantity_for_days"] = $var1/$var2;
 
       //Pendiente pasar a funcion covertir a 0 float
-        if ((is_nan($get_items_match_array[$key]["sold_quantity_for_days"])) || (is_infinite($get_items_match_array[$key]["sold_quantity_for_days"])) || ($get_items_match_array[$key]["sold_quantity_for_days"] == 0)) {
+        
+        if ((is_nan($get_items_match_array[$key]["sold_quantity_for_days"])) || (is_infinite($get_items_match_array[$key]["sold_quantity_for_days"])) || ($get_items_match_array[$key]["sold_quantity_for_days"] === 0)) {
           $get_items_match_array[$key]["sold_quantity_for_days"] = 0;
           $get_items_match_array[$key]["sold_quantity_for_days"] = floatval($get_items_match_array[$key]["sold_quantity_for_days"]);
         }
-        var_dump("sold_quantity_for_days");
-        var_dump($get_items_match_array[$key]["sold_quantity_for_days"]);
+        
+
+        $get_items_match_array[$key]["sold_quantity_for_days"] = floatval($get_items_match_array[$key]["sold_quantity_for_days"]);
+
+        //var_dump("sold_quantity_for_days");
+        //var_dump($get_items_match_array[$key]["sold_quantity_for_days"]);
       } 
 
       // more than 1 year and half in market boolian 
-
+      /*
         if($item_time_active_array == null){
-          $item_time_active_array = $this -> get_item_time_active_array($time_created_array, "days", $healt_array, $url_azure_cloud_time_created);
+          $item_time_active_array = $this -> get_item_time_active_array($time_created_array, $time_parameter = "days", $healt_array);
         }
 
-        var_dump("active time products in days");
-        var_dump($item_time_active_array);
-
+        //var_dump("active time products in days");
+        //var_dump($item_time_active_array);
+        
         foreach ($object_array as $key => $value) {
 
           if ($item_time_active_array[$key] != null) {
@@ -465,7 +781,7 @@ class Meli
             $get_items_match_array[$key][$week] = $items_52_week_visits_array[$item_id][$week];
           }          
         }
-      
+      */
       //return
 
       return $get_items_match_array; 
@@ -537,9 +853,10 @@ class Meli
         $healt_array[$key] = $result[$key]["health"];
       }
 
+      //Pendiente borrar url_azure_cloud_time_created, primero verificar que local la resta de dias funciona bien  
       $url_azure_cloud_time_created = "https://predictmarket.azurewebsites.net/api/itemTimecreated?code=lDYeIva/V1NnW/M8lkBeiGnpZ/OyOp53hSa9WxY5WMLGnIlpIabH1w==";
 
-      $item_time_active_array = $this -> get_item_time_active_array($time_created_array, "days", $healt_array, $url_azure_cloud_time_created);
+      $item_time_active_array = $this -> get_item_time_active_array($time_created_array, $time_parameter = "days", $healt_array);
 
       foreach ($object_array as $key => $value) {
         $var1 = $sold_quantity_array[$key];
@@ -783,6 +1100,139 @@ class Meli
         }
     }
 
+    public function get_articles_total_v2($category_id, $total_articles, $limit = 50, $country_id, $plus, $force_calculation_under_1000){
+
+      $start_time = microtime(true);
+
+      if($total_articles == null){
+
+        $obj = $this -> get_country_articles($category_id, $country_id);
+
+        //var_dump("get_country_articles");
+        //var_dump($obj);
+        $total_articles = $obj["paging"]["total"];
+      }
+
+      var_dump("total articles");
+      var_dump($total_articles);
+
+      if ($total_articles <= 1000) {        
+
+       //just_1000: // old code - when $force_calculation_under_1000 = true
+       for ($j=1;  $j <= ceil($total_articles / $limit); $j++)
+          {
+            if ($j == ceil($total_articles / $limit)) {
+              $last_limit = $total_articles % $limit;
+
+              $category_array[] = $category_id . "&limit=" . $last_limit . "&offset=" . ($j-1)*50 . $plus;
+            }
+            else{
+              $category_array[] = $category_id . "&limit=" . $limit . "&offset=" . ($j-1)*50 . $plus; 
+            }              
+          }
+
+        //var_dump("categories");
+        //var_dump($category_array);
+
+        $total_items_category = $this -> get_real_articles_array_country($category_array, $country_id);
+
+        var_dump("total_items_category");
+        var_dump(count($total_items_category));
+        //var_dump($total_items_category[0]);    
+       
+      }
+      else{
+
+        $item_groups = $this -> get_ranking_item_groups($total_articles, $category_id,  $offset_group = 1000, $country_id);
+
+        $token_negative_offset = false;
+        foreach ($item_groups["quantity_array"] as $key => $value) {
+
+          //work with with big categories more than 1000 items in a filter price (499.9-500)
+            if($item_groups["quantity_array"][$key] > 1000){
+              $token_negative_offset = true;
+              continue;
+            }
+                  
+            for ($j=1;  $j <= ceil($item_groups["quantity_array"][$key] / $limit); $j++)
+            {
+              if ($j == ceil($item_groups["quantity_array"][$key] / $limit)) {
+                $last_limit = $item_groups["quantity_array"][$key] % $limit;
+
+                $category_array[] = $category_id . "&limit=" . $last_limit . "&offset=" . ($j-1)*50 . "&price=" . $item_groups['min_max_price'][$key]["min"] . "-" . $item_groups['min_max_price'][$key]["max"];
+              }
+              else{
+                $category_array[] = $category_id . "&limit=" . $limit . "&offset=" . ($j-1)*50 . "&price=" . $item_groups['min_max_price'][$key]["min"] . "-" . $item_groups['min_max_price'][$key]["max"]; 
+              }              
+            }
+
+            var_dump("category_array");
+            var_dump($category_array);
+
+            $total_items_category_groups = $this -> get_real_articles_array_country($category_array, $country_id);
+
+            if($total_items_category != null){
+              foreach ($total_items_category_groups as $key => $value) {
+                array_push($total_items_category, $total_items_category_groups[$key]);
+              }
+            }
+            else{
+              $total_items_category = $total_items_category_groups;
+            }
+
+            var_dump(count($total_items_category));
+            //var_dump($total_items_category);
+
+            unset($category_array);
+        }
+
+        var_dump("total items found");
+        var_dump($total_items_category);
+
+        if($force_calculation_under_1000 == true){
+
+          $items_to_rand = $total_items_category;
+          unset($total_items_category);
+
+          foreach ($items_to_rand as $key => $value) {
+            $rand_value = mt_rand(0, count($items_to_rand) - 1);
+            $total_items_category_unsort[$key] = $items_to_rand[$rand_value];
+            $test_rand[$key] = $rand_value;
+
+            if (count($total_items_category_unsort) == 1000) {
+              $total_items_category_unsort = array_unique($total_items_category_unsort);
+              $total_items_category_to_sort = $total_items_category_unsort;
+              $new_key = 0;
+              foreach ($total_items_category_to_sort as $key => $value) {
+                $total_items_category[$new_key] = $total_items_category_to_sort[$key];
+                $new_key = $new_key + 1;
+              }
+              break; // return a sort array of rand keys ex: (1, 3, 1001, 2007) where all keys are differents
+            }
+          }
+
+          var_dump("rand keys selected");
+          var_dump($test_rand);
+
+          //var_dump("final rand output before array_unique");
+          //var_dump($total_items_category);
+
+          //$total_items_category = array_unique($total_items_category);
+
+          var_dump("final rand output after array_unique");
+          var_dump($total_items_category);
+        }
+
+
+      }
+
+      $end_time = microtime(true);
+        echo "<br> Rounded runtime: get_articles_total_v2 ->" . round($end_time - $start_time, 4) . " seconds";
+        echo "<br>download speed : " . round(count($total_items_category)/($end_time - $start_time), 4) . " art/seconds";
+
+      return $total_items_category;           
+    }
+
     //get_ranking_item
 
     public function get_ranking_item_array($object_array, $limit = 50, $country_id){
@@ -794,7 +1244,23 @@ class Meli
           $categorys_existing[$key] = $object_array[$key]["category_id"];      
       }
 
+      
+      var_dump("categorys_existing before array_unique");
+      var_dump($categorys_existing);
+
       $categorys_existing = array_unique($categorys_existing); //Remove duplicate values ​​from an array
+
+      //fix key because array_unique can return for example (0 => string 'MLM4605', 7 => string 'MLM194084')
+      $fix_key = 0;
+      foreach ($categorys_existing as $key => $value) {
+        $step[$fix_key] = $categorys_existing[$key];
+        $fix_key = $fix_key + 1;
+      }
+      unset( $categorys_existing);
+      $categorys_existing = $step;
+
+      var_dump("categorys_existing  after array_unique");
+      var_dump($categorys_existing);
 
       // form $item_id_array for every category existing
 
@@ -1014,8 +1480,8 @@ class Meli
           // cycle for all groups assuming that the ranking increases proportionally in each group.
 
           $speed = $group_position/$known_offset_array[$group_key]; //adimensional
-          var_dump('speed');
-          var_dump($speed);
+          //var_dump('speed');
+          //var_dump($speed);
           $other_group_position = 0;
           $ranking_position[$item_position] = 0;
           foreach ($known_offset_array as $key => $value) {
@@ -1035,8 +1501,8 @@ class Meli
           //convert float to integer
           $ranking_position[$item_position] = intval(round($ranking_position[$item_position], 0));
           
-          var_dump('ranking_position');
-          var_dump($ranking_position[$item_position]);
+          //var_dump('ranking_position');
+          //var_dump($ranking_position[$item_position]);
         }
       }
 
@@ -1051,8 +1517,11 @@ class Meli
 
         //Pendiente esta funcion se le tiene que modificar la busqueda por items , problema devuelve array no mayor a 50 size
 
-         //var_dump(" get_ranking_item_less1000 item_id_array");
-         //var_dump($item_id_array);
+         var_dump(" get_ranking_item_less1000 item_id_array input");
+         var_dump($item_id_array);
+
+         var_dump("get_ranking_item_less1000 total_articles");
+         var_dump($total_articles);
           
         for ($j=1;  $j <= ceil($total_articles / $limit); $j++)
         {
@@ -1069,19 +1538,17 @@ class Meli
           }  
         }
         
-        $i = 0;
         //var_dump('category_array');
         //var_dump($category_array);
 
-        //$total_items_category = $this -> get_articles_array_country($category_array, $country_id);
         $total_items_category = $this -> get_real_articles_array_country($category_array, $country_id);
 
         if ($option_big_1000 == true){
-          //$ranking_position = [0][0];
-          $ranking_position["all"] = $this -> get_real_articles_array_country($category_array, $country_id);
           
-          //var_dump("category_array option_big_1000");
-          //var_dump(count($ranking_position["all"]));
+          $ranking_position["all"] = $total_items_category;
+          
+          var_dump("get_ranking_item_less1000 ranking_position[all]");
+          var_dump(count($ranking_position["all"]));
           //var_dump($ranking_position["all"]);         
         }
         else{
@@ -1104,22 +1571,29 @@ class Meli
           if (($item_match = array_intersect($item_id_array, $item_to_array)) != null) {
 
             if ($option_big_1000 == true){
-              // this are elements (less than 1000) how dont need more calculation.
+              // this are elements (less than 1000) dont need more calculation.
               //var_dump('item_position');
               //var_dump($item_position);
               $ranking_position["know"][key($item_match)] = $item_position + 1;
             }
             else{
-              // less than 1000
+              //less than 1000
               
               $ranking_position[key($item_match)] = $item_position + 1;
             }                           
+          }
+          else{
+            //testing purpuse
+            $lost_item[$item_position + 1] = $obj;
           }
           if (count($ranking_position) == count($item_id_array)) {
             var_dump("check if the search is all complete, to save memory");
             break;
           }                            
         }
+
+        var_dump("lost items");
+        var_dump($lost_item);
 
         //end!
         /* 
@@ -1154,12 +1628,10 @@ class Meli
         */
 
         if ($option_big_1000 == true){
-          var_dump("category_array option_big_1000");
+          var_dump("item_less1000 that were found");
           var_dump(count($ranking_position["know"]));
           var_dump($ranking_position["know"]);
-        }
-
-        
+        }      
 
         return $ranking_position;    
     }
@@ -1456,7 +1928,7 @@ class Meli
 
         $local = file_get_contents("D:/mercadolibre_data/" . $local_file);
 
-        $obj = json_decode($local, $assoc=true);
+        $obj = json_decode($local, $assoc = true);
         
         var_dump(count($obj));
         var_dump($obj[$main_parent_category]['path_from_root'][0]["id"]);
@@ -1505,7 +1977,8 @@ class Meli
                 } else {
                     //  var_dump($i . " es " . $obj_num[$i]["id"]  . " -  middle_child");
                 }
-            } else {
+            } 
+            else {
                 //var_dump($i . "negative");
             }
         }
@@ -1515,6 +1988,197 @@ class Meli
         $end_time = microtime(true);
 
         echo "<br> Get_children_local time rounded: " . round($end_time - $start_time, 4) . " seconds";
+    }
+
+    public function get_major_father_categories($country_id){
+
+      $url = "https://api.mercadolibre.com/sites/" . $country_id . "/categories";
+
+      //This method looks for the json of the url and turns it into an object, $ assoc = true passes it from object to associative array.
+     
+      $json = curl::file_get_contents_curl($url, $options = array(CURLOPT_SSL_VERIFYPEER => false));
+     
+      $obj = json_decode($json, $assoc = true);
+
+      $count_children = count($obj);
+      
+      for ($i=0; $i < $count_children; $i++) {
+          $children_categories[$i] = $obj[$i]["id"];
+      }
+      
+      return $children_categories;
+    }
+
+    public function get_cousin_categories_array($category_array, $country_base){
+
+      $category_object = $this -> get_category_object($category_array);
+
+      //get names of categories //
+
+        foreach ($category_object as $key => $value) {
+          $item_title_array[$key] = $category_object[$key]["name"];
+          $test_category[] = $category_array[$key];
+        }
+        // MLB need to be traduce to portuguese
+        $item_title_pt_array = analysis::traduce_to_pt_v2($item_title_array);
+        var_dump("testing portuguesse");
+        var_dump($item_title_pt_array);
+
+      //get all cousin categories id //
+
+        foreach (analysis::$Name_coin as $country_name => $coin) {
+
+          var_dump("category items Country search : " . $country_name);
+
+          // MLB need to be traduce to portuguese
+          if ($country_name == "MLB") {
+            $items_competition_search = analysis::custom_search_array_v2($item_title_pt_array, $plus = "&limit=1", $country_name);
+
+            $predicted_category_pt = analysis::get_category_predictor_v2($item_title_pt_array, $country_name);
+
+            foreach ($items_competition_search as $key => $value) {
+            
+              $category_id_cousins[$category_array[$key]][$country_name] = $predicted_category_pt [$key]["id"];
+            }
+          }
+          elseif ($country_name == $country_base){
+          //$country_base category is know so we jump it 
+
+            foreach ($items_competition_search as $key => $value) {
+              
+              $category_id_cousins[$category_array[$key]][$country_name] = $category_array[$key];
+            }
+            continue; //next country
+          }
+          else{
+             $items_competition_search = analysis::custom_search_array_v2($item_title_array, $plus = "&limit=1", $country_name);
+
+             foreach ($items_competition_search as $key => $value) {
+              
+              $category_id_cousins[$category_array[$key]][$country_name] = $items_competition_search[$key]["results"][0]["category_id"];
+
+              $test_category[] = $items_competition_search[$key]["results"][0]["category_id"];
+            }
+          }           
+        }
+
+        var_dump("category_id_cousins");
+        var_dump($category_id_cousins);
+
+      //testing category name //
+
+        var_dump("categories_id to test");
+        var_dump($test_category);
+        $category_object_test = $this -> get_category_object($test_category);
+
+        foreach ($category_object_test as $key => $value) {
+          $item_title_array_test[$test_category[$key]] = $category_object_test[$key]["name"];
+        }
+
+        var_dump("categories_names to test");
+        var_dump($item_title_array_test);
+
+        foreach (analysis::$Name_coin as $country_name => $coin) {
+
+          $items_competition_search = analysis::custom_search_array_v2($item_title_array, $plus = "&limit=1", $country_name);
+
+          //$country_base category is know so we jump it 
+
+          if ($country_name == $country_base) {    
+
+            foreach ($items_competition_search as $key => $value) {
+              $category_reference_name = $item_title_array_test[$category_array[$key]];
+              $category_name_cousins[$category_reference_name][$country_name] = $item_title_array_test[$category_array[$key]];
+            }
+            continue; //next country
+          }
+
+          // MLB need to be traduce to portuguese
+
+          if ($country_name == "MLB"){
+            //$category_reference_name_pt = $item_title_array_test[$category_array[$key]];
+
+            foreach ($items_competition_search as $key => $value) {
+              
+              $category_reference_name = $item_title_array_test[$category_array[$key]];
+              $category_reference_name_pt = $item_title_pt_array[$key];
+              var_dump("category_reference_name portuguese");
+              var_dump($category_reference_name_pt);
+
+              var_dump("category_reference_name portuguese to compare");
+              //var_dump($item_title_array_test[$items_competition_search[$key]["results"][0]["category_id"]]);
+              //$item_title_array_test[$test_category[$key + 2*count($category_array)]] = "Cafés da manhã e lanches";
+              //var_dump($item_title_array_test[$test_category[$key + 2*count($category_array)]]); 
+              //var_dump($test_category[$key + 2*count($category_array)]);  
+              var_dump($predicted_category_pt [$key]["name"]);
+              var_dump($predicted_category_pt [$key]["id"]);
+
+              $equal_true_or_false = analysis::at_least_one_word_comparation($category_reference_name_pt, $predicted_category_pt[$key]["name"]);
+
+              var_dump("at_least_one_word_comparation");
+              var_dump($equal_true_or_false);
+
+              // MLB position on array    
+              /*
+              if($category_reference_name_pt == $item_title_array_test[$test_category[$key + 2*count($category_array)]]){
+
+                $category_name_cousins[$category_reference_name][$country_name] = $item_title_array_test[$test_category[$key + 2*count($category_array)]];
+              }
+              */
+              if($equal_true_or_false){
+                $category_name_cousins[$category_reference_name][$country_name] = $predicted_category_pt [$key]["name"];
+              }
+              else{
+                $category_name_cousins[$category_reference_name][$country_name] = "dont_match";
+                $category_id_cousins[$category_array[$key]][$country_name] = "dont_match";
+              } 
+            }
+            continue; //next country
+          }
+         
+          foreach ($items_competition_search as $key => $value) {
+
+            $category_reference_name = $item_title_array_test[$category_array[$key]];
+
+            if($category_reference_name == $item_title_array_test[$items_competition_search[$key]["results"][0]["category_id"]]){
+
+              $category_name_cousins[$category_reference_name][$country_name] = $item_title_array_test[$items_competition_search[$key]["results"][0]["category_id"]];
+            }
+            else{
+              $category_name_cousins[$category_reference_name][$country_name] = "dont_match";
+              $category_id_cousins[$category_array[$key]][$country_name] = "dont_match";
+            }         
+          } 
+        }
+
+      var_dump("name testing output");
+      var_dump($category_name_cousins);
+
+      return $category_id_cousins;
+    }
+
+    public function get_all_children_categories_mexico_local(){
+
+      $local_file = 'categoriesMLM.json';
+
+      $local = file_get_contents("D:/mercadolibre_data/" . $local_file);
+
+      $obj = json_decode($local, $assoc=true);
+      $obj_num = array_values($obj);
+      
+      var_dump(count($obj));
+      $obj_size = count($obj);
+
+      $step = 0;
+      for ($i=0; $i < $obj_size; $i++) {
+
+        if (!isset($obj_num[$i]["children_categories"][0]["id"])){
+          $children_category[$step] = $obj_num[$i]["id"];
+          $step = $step + 1;
+        }
+      }
+        
+      return $children_category;
     }
 
     public function custom_generalmatch_search($search, $plus, $return_object = false){
@@ -1582,6 +2246,478 @@ class Meli
         return $match_ids;
     }
 
+    public function comparison_model_prepare_to_getfeatures_v2($min_children_category, $max_children_category, $plus, $force_calculation_under_1000, $country_base){
+
+      $start_time = microtime(true);
+
+      // obtein categories match in Latinoamerica to pick data
+
+        if ($country_base = "MLM") {
+          $children_categories = $this -> get_all_children_categories_mexico_local();
+        }
+        else{
+          return "just $country_base for MLM mexico";
+        }
+
+        var_dump($children_categories);
+
+        $step = 0;
+        for ($j = $min_children_category;  $j <= $max_children_category; $j++){
+
+          $category_array[$step] = $children_categories[$j];
+          $step = $step + 1;
+        }
+
+        var_dump($category_array);
+
+        $category_cousins = $this -> get_cousin_categories_array($category_array, $country_base);
+
+
+        $cousin_and_total_items["category_cousins"] = $category_cousins;
+
+        var_dump($category_cousins);
+
+      // obtein items in cousins categories  
+
+        foreach ($category_cousins as $country_base_category => $value) {
+          
+          $total_items_Latinoamerica = 0;
+
+          foreach ($category_cousins[$country_base_category] as $country_id => $value) {
+
+            var_dump("country_base_category: " . $country_base_category . " country: " . $country_id);
+
+            //eliminate dont match categories
+            if ($category_cousins[$country_base_category][$country_id] == "dont_match") {
+              $result_category_items[$country_id] = null;
+              continue; //next country 
+            }else{
+              $match_category = $category_cousins[$country_base_category][$country_id];
+            } 
+            
+            if($country_id == $country_base){
+
+              $Tiny_data = false; // you want to prioritize that finds more data from the base country
+              $array_to_search = $this -> get_articles_total_v2($match_category, $total_articles = null, $limit = 50, $country_id, $plus, $Tiny_data);
+
+            }
+            else{
+              $array_to_search = $this -> get_articles_total_v2($match_category, $total_articles = null, $limit = 50, $country_id, $plus, $force_calculation_under_1000);
+
+            }
+
+            $total_items_Latinoamerica = $total_items_Latinoamerica + count($array_to_search);
+
+            $result_category_items[$country_id] = $this -> get_full_article_array($array_to_search);     
+          }
+
+          //save items local
+
+          var_dump("total_items_Latinoamerica");
+          var_dump($total_items_Latinoamerica);
+          $cousin_and_total_items["total_items"] = $total_items_Latinoamerica;
+
+          $save_category = $country_base_category;
+          $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+
+          $dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . '_predictor.json';
+
+          var_dump("dir_save");
+          var_dump($dir_save);
+
+          $this -> save_json($result_category_items, $dir_save);
+          unset($result_category_items);
+        }
+
+      $end_time = microtime(true);
+
+      echo "<br> indirect call - comparison_model_prepare_to_getfeatures- time rounded: " . round($end_time - $start_time, 6) . " seconds";
+
+      return $cousin_and_total_items;
+      
+    }
+
+    public function get_items_features_unified_v2($min_children_category, $max_children_category, $category_cousins, $country_base){
+
+      $start_time = microtime(true);
+
+      // get_items_features
+
+        foreach ($category_cousins as $country_base_category => $value) {
+          
+          $local_file = $country_base_category . "_predictor";
+          $result_general_category_items = $this -> load_json("predictorMachineLearning/" . $local_file . ".json");
+
+          foreach ($result_general_category_items as $country_id => $value) {
+            
+            if ($result_general_category_items[$country_id] == null) {
+              continue;
+            }
+            else{
+
+              $items_features_category_items_country = $this -> get_items_features($result_general_category_items[$country_id], $features_to_obtain = null, $country_id);
+            }
+
+            //push an array of category_items, ex: A + AB + ABC ...
+            if($items_features_category_items != null){
+              foreach ($items_features_category_items_country as $key => $value) {
+                array_push($items_features_category_items, $items_features_category_items_country[$key]);
+              }
+            }
+            else{
+              $items_features_category_items = $items_features_category_items_country;
+            }
+          }
+
+          $this -> csv_to_machinelearning_v2($items_features_category_items, $country_base_category);
+          unset($items_features_category_items);
+        }
+
+
+      $end_time = microtime(true);
+
+      echo "<br> indirect call - get_items_features_unified- time rounded: " . round($end_time - $start_time, 6) . " seconds";
+    }
+
+    public function csv_to_machinelearning_v2($items, $category_id){
+
+      $Azure_logicApps_TrainingMachineLearning = "https://prod-19.centralus.logic.azure.com:443/workflows/96e3d6f34edc43be849ae7304c8fedf7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=9rcOZAumI5eJy7kJEIK7ylJPIUkxN9LNNRnJAnogYZU";
+
+      //$Azure_csvtoAzureBlob = "https://mlconexionmeli.azurewebsites.net/api/csvtoAzureBlob?code=xMNGNalSwHfaSpdkyfD/5lcvqftl8wBAfl7PKtX5qrQbyUsYmSqasQ==";
+      
+      $body = array(
+        "items" => $items,
+        "category_id" => $category_id
+      );
+      
+      $save_category = $category_id;
+
+      $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+      $dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . 'features_predictor.json';
+
+      var_dump("dir_save");
+      var_dump($dir_save);
+
+      $this -> save_json($body, $dir_save);
+      
+      //load features archive
+      
+      //$body = $meli -> load_json("predictorMachineLearning/MLM1077features_predictor.json");
+
+      var_dump("antes de json_encode");
+      var_dump($body);
+      //var_dump(typeof($body));
+
+      $body = json_encode($body);
+
+      switch (json_last_error()) {
+            case JSON_ERROR_NONE:
+                echo ' - No errors';
+            break;
+            case JSON_ERROR_DEPTH:
+                echo ' - Maximum stack depth exceeded';
+            break;
+            case JSON_ERROR_STATE_MISMATCH:
+                echo ' - Underflow or the modes mismatch';
+            break;
+            case JSON_ERROR_CTRL_CHAR:
+                echo ' - Unexpected control character found';
+            break;
+            case JSON_ERROR_SYNTAX:
+                echo ' - Syntax error, malformed JSON';
+            break;
+            case JSON_ERROR_UTF8:
+                echo ' - Malformed UTF-8 characters, possibly incorrectly encoded';
+            break;
+            default:
+                echo ' - Unknown error';
+            break;
+        }
+
+      var_dump("despues de json_encode");
+      var_dump($body);
+
+      $CURL_OPTS = array(
+        //revisar si es necesario esta linea
+          //CURLOPT_USERAGENT => "MELI-PHP-SDK-2.0.0", 
+          // revisar si es necesario que este en true 
+          //CURLOPT_SSL_VERIFYPEER => true,
+          CURLOPT_SSL_VERIFYPEER => false,
+          //CURLOPT_CONNECTTIMEOUT => 10, 
+          CURLOPT_CONNECTTIMEOUT => 180, 
+          CURLOPT_RETURNTRANSFER => 1, 
+          CURLOPT_TIMEOUT => 180
+      );
+
+      $opts = array(
+          CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
+          CURLOPT_POST => true, 
+          CURLOPT_POSTFIELDS => $body
+      );
+
+      $uri = $Azure_logicApps_TrainingMachineLearning;
+
+      $ch = curl_init($uri);
+      curl_setopt_array($ch, $CURL_OPTS);
+      curl_setopt_array($ch, $opts);
+
+      $return["body"] = json_decode(curl_exec($ch), true);
+      $return["httpCode"] = curl_getinfo($ch, CURLINFO_HTTP_CODE);  
+
+      curl_close($ch);
+
+      var_dump($return);
+    }
+
+    public function comparison_model_prepare_to_getfeatures($title_type, $title_brand, $title_model, $title_plus, $plus, $force_calculation_under_1000, $country_base){
+
+      //It could be post in another class out of meli because it get complex
+      
+      $start_time = microtime(true);
+
+      $result_general_category_items = $this -> category_generalitems_search($title_type, $title_brand, $title_model, $title_plus, $plus, $force_calculation_under_1000, $country_base);
+
+      $title_search = $title_type . " " . $title_brand . " " . $title_model . " " . $title_plus;
+      $title_search = preg_replace('/\s\s+/', ' ', $title_search); //Remove the remaining blanks spaces
+      $title_search = trim($title_search);
+
+      $step = analysis::get_category_predictor($title_search, $country_base);
+      $save_category = $step["id"];
+
+      $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+      $dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . '_predictor.json';
+
+      var_dump("dir_save");
+      var_dump($dir_save);
+
+      $this -> save_json($result_general_category_items, $dir_save);
+
+      $end_time = microtime(true);
+
+      echo "<br> indirect call - comparison_model_prepare_to_getfeatures- time rounded: " . round($end_time - $start_time, 6) . " seconds";
+
+      return $save_category . "_predictor";
+    }
+
+    public function get_items_features_unified($local_file, $title_search, $country_base){
+
+      $start_time = microtime(true);
+
+      $result_general_category_items = $this -> load_json("predictorMachineLearning/" . $local_file . ".json");
+
+      foreach ($result_general_category_items as $country_id => $value){
+            
+        if ($result_general_category_items[$country_id] == null) {
+          continue;
+        }
+        else{
+
+          $items_features_category_items_country = $this -> get_items_features($result_general_category_items[$country_id], $features_to_obtain = null, $country_id);
+
+        }
+
+        //push an array of category_items, ex: A + AB + ABC ...
+        if($items_features_category_items != null){
+          foreach ($items_features_category_items_country as $key => $value) {
+            array_push($items_features_category_items, $items_features_category_items_country[$key]);
+          }
+        }
+        else{
+          $items_features_category_items = $items_features_category_items_country;
+        }
+      }
+
+      /*
+      $items_features_category_items_country = $meli -> get_items_features($result_general_category_items["MLM"], $features_to_obtain = null, $country_id = "MLM");
+
+      $items_features_category_items = $items_features_category_items_country;
+      */
+
+      $items_features_competition = $items_features_category_items;
+
+      //$Azure_csvtoAzureBlob = "https://mlconexionmeli.azurewebsites.net/api/csvtoAzureBlob?code=xMNGNalSwHfaSpdkyfD/5lcvqftl8wBAfl7PKtX5qrQbyUsYmSqasQ==";
+
+      $Azure_logicApps_TrainingMachineLearning = "https://prod-19.centralus.logic.azure.com:443/workflows/96e3d6f34edc43be849ae7304c8fedf7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=9rcOZAumI5eJy7kJEIK7ylJPIUkxN9LNNRnJAnogYZU";
+
+      $step = analysis::get_category_predictor($title_search, $country_base);
+      $match_category = $step["id"];
+
+      
+      $body = array(
+        "items" => $items_features_competition,
+        "category_id" => $match_category
+      );
+      
+      $save_category = $step["id"];
+
+      $DEFAULT_SAVE_DIR = "wamp64/www/cursoPHP/mercadolibre_comparador/data/";
+      $dir_save = $DEFAULT_SAVE_DIR . "predictorMachineLearning/" . $save_category . 'features_predictor.json';
+
+      var_dump("dir_save");
+      var_dump($dir_save);
+
+      $this -> save_json($body, $dir_save);
+      
+      //load features archive
+      
+      //$body = $meli -> load_json("predictorMachineLearning/MLM1077features_predictor.json");
+
+      var_dump("antes de json_encode");
+      var_dump($body);
+      //var_dump(typeof($body));
+
+      $body = json_encode($body);
+
+      switch (json_last_error()) {
+            case JSON_ERROR_NONE:
+                echo ' - No errors';
+            break;
+            case JSON_ERROR_DEPTH:
+                echo ' - Maximum stack depth exceeded';
+            break;
+            case JSON_ERROR_STATE_MISMATCH:
+                echo ' - Underflow or the modes mismatch';
+            break;
+            case JSON_ERROR_CTRL_CHAR:
+                echo ' - Unexpected control character found';
+            break;
+            case JSON_ERROR_SYNTAX:
+                echo ' - Syntax error, malformed JSON';
+            break;
+            case JSON_ERROR_UTF8:
+                echo ' - Malformed UTF-8 characters, possibly incorrectly encoded';
+            break;
+            default:
+                echo ' - Unknown error';
+            break;
+        }
+
+      var_dump("despues de json_encode");
+      var_dump($body);
+
+      $CURL_OPTS = array(
+        //revisar si es necesario esta linea
+          //CURLOPT_USERAGENT => "MELI-PHP-SDK-2.0.0", 
+          // revisar si es necesario que este en true 
+          //CURLOPT_SSL_VERIFYPEER => true,
+          CURLOPT_SSL_VERIFYPEER => false,
+          //CURLOPT_CONNECTTIMEOUT => 10, 
+          CURLOPT_CONNECTTIMEOUT => 180, 
+          CURLOPT_RETURNTRANSFER => 1, 
+          CURLOPT_TIMEOUT => 180
+      );
+
+      $opts = array(
+          CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
+          CURLOPT_POST => true, 
+          CURLOPT_POSTFIELDS => $body
+      );
+
+      $uri = $Azure_logicApps_TrainingMachineLearning;
+
+      $ch = curl_init($uri);
+      curl_setopt_array($ch, $CURL_OPTS);
+      curl_setopt_array($ch, $opts);
+
+      $return["body"] = json_decode(curl_exec($ch), true);
+      $return["httpCode"] = curl_getinfo($ch, CURLINFO_HTTP_CODE);  
+
+      curl_close($ch);
+
+      var_dump($return);
+
+      $end_time = microtime(true);
+
+      echo "<br> indirect call - get_items_features_unified- time rounded: " . round($end_time - $start_time, 6) . " seconds";
+    }
+
+    public function category_generalitems_search($title_type, $title_brand, $title_model, $title_plus, $plus, $force_calculation_under_1000, $country_base) 
+    {
+
+      foreach (analysis::$Name_coin as $country_name => $coin) {
+
+          var_dump("category items Country search : " . $country_name);
+
+          if ($country_name == $country_base) {
+
+            $step = $force_calculation_under_1000;
+            $step = false; // you want to prioritize that finds more data from the base country
+            $result_category_items[$country_name] = $this -> category_localitems_search($title_type, $title_brand, $title_model, $title_plus, $plus, $country_name, $step);
+          }
+          else {
+
+            $result_category_items[$country_name] = $this -> category_localitems_search($title_type, $title_brand, $title_model, $title_plus, $plus, $country_name, $force_calculation_under_1000);
+          }
+                  
+      }     
+
+      return $result_category_items;
+
+    }
+
+    public function category_localitems_search($title_type, $title_brand, $title_model, $title_plus, $plus, $country_id, $force_calculation_under_1000){
+
+      static $reference_category;
+
+      //first country MLA better category tree
+      if ($reference_category == null) {
+        
+        $title_search = $title_type . " " . $title_brand . " " . $title_model . " " . $title_plus;
+
+        //$step = analysis::get_category_by_ranking_search($title_search, $country_id);
+        $step = analysis::get_category_predictor($title_search, "MLA");
+        //$reference_category = $step;
+        $reference_category = $title_search;
+      }
+
+      
+      if($country_id == "MLA"){
+        
+        $match_category = $step["id"];
+        //$match_category = $step;
+
+        //$match_category = analysis::get_category_by_ranking_search($title_search, $country_id);
+        
+        //$reference_category = $match_category;
+      }
+      elseif($country_id == "MLB"){
+
+        var_dump("reference_category");
+        var_dump($reference_category);
+
+        $reference_category_portuguese = analysis::traduce_to_pt($reference_category);
+
+        var_dump("reference_category portuguese");
+        var_dump($reference_category_portuguese);
+
+         //$title_search = "Lâmina de substituição para barbeador elétrico Oneblade";
+
+         //$step = analysis::get_category_predictor($reference_category_portuguese, $country_id);
+         //$match_category = $step["id"];
+
+         $match_category = analysis::get_category_by_ranking_search($reference_category_portuguese, $country_id);
+
+      }
+      else{
+        
+        //$step = analysis::get_category_predictor($reference_category, $country_id);
+        //$match_category = $step["id"];
+
+
+
+        $match_category = analysis::get_category_by_ranking_search($reference_category, $country_id);
+      }
+
+      var_dump("match_category");
+      var_dump($match_category);
+
+      $array_to_search = $this -> get_articles_total_v2($match_category, $total_articles = null, $limit = 50, $country_id, $plus, $force_calculation_under_1000);
+
+      $total_items_category = $this -> get_full_article_array($array_to_search);
+
+      return $total_items_category;
+    }
+
     public function custom_generalcompetition_search($title_type, $title_brand, $title_model, $title_plus, $plus = null, $return_object = true, $expansion_method){
 
        foreach (analysis::$Name_coin as $country_name => $coin) {
@@ -1631,7 +2767,8 @@ class Meli
 
       //take $match_category search
       
-      $match_category = analysis::get_category_predictor($short_search, $country_id);
+      $step = analysis::get_category_predictor($short_search, $country_id);
+      $match_category = $step["id"];
 
       if ($plus == null) {
         $plus_category = "&category=" . $match_category;
@@ -1767,10 +2904,10 @@ class Meli
       var_dump("plus array custom_localcompetition_search");
       var_dump($plus_array);  
 
-      var_dump("total_items_competition");
+      var_dump("total_items_competition found");
       var_dump($total_items_competition);
 
-      var_dump("primary_results_items_competition");
+      var_dump("primary_results_items_competition found");
       var_dump($primary_results_items_competition);
 
       $items_competition_search = analysis::custom_search_array($short_search, $plus_array, $country, $pass_access_token = false);
@@ -1909,8 +3046,24 @@ class Meli
 
     public function save_json($json, $dir_save){
 
-      $json = json_encode($json); 
-      $save_it = $this->file_force_contents($dir_save, $json);
+      $json = json_encode($json);
+
+      try {
+         $save_it = $this -> file_force_contents($dir_save, $json);
+         var_dump("correct save: " . $dir_save);
+       } catch (Exception $e) {
+         var_dump($e);
+       }  
+    }
+
+    public function load_json($dir_save){
+
+      $local = file_get_contents("C:/wamp64/www/cursoPHP/mercadolibre_comparador/data/" . $dir_save);
+
+      var_dump("C:/wamp64/www/cursoPHP/mercadolibre_comparador/data/" . $dir_save);
+      $obj = json_decode($local, $assoc = true);
+
+      return $obj;
     }
 
     public function save_error($save = true, $category_offset_error = 0){

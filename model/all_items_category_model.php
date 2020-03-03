@@ -1,4 +1,7 @@
 <?php
+
+ini_set('memory_limit', '1024M'); // or you could use 1G
+
 /*
 //$category_id = "MLM7734"; //tarjetas de memoria
 //$category_id = "MLM189975"; //estampillas
@@ -90,6 +93,77 @@ $array_international = array(
 1 => "MLB1020718649"
 );
 
+//$object_array = $meli -> load_json("predictorMachineLearning/MLM4605_predictor.json");
+
+$title_existing = $meli -> get_articles_total_v2("MLM4605", $total_articles = null, $limit = 50, $country_id = "MLM", $plus = null, $force_calculation_under_1000 = false);
+
+var_dump("$title_existing before array_unique");
+var_dump($title_existing);
+
+$title_existing_output = array_unique($title_existing); //Remove duplicate values ​​from an array
+
+var_dump("$title_existing after array_unique");
+var_dump($title_existing_output);
+
+$total_items_category = $meli -> get_full_article_array($title_existing);
+
+var_dump(count($total_items_category));
+
+foreach ($total_items_category as $key => $value) {
+ 	$title_existing_after[$key] = $total_items_category[$key]["id"];
+ } 
+
+var_dump($title_existing_after);
+
+
+
+/*
+var_dump(count($object_array));
+
+foreach ($object_array as $key => $value) {
+  $title_existing[$key] = $object_array[$key]["id"];      
+}
+*/
+foreach ($title_existing_after as $key => $value) {
+	if ($value == "MLM739753599")
+	{
+		var_dump("anterior a filtro MLM739753599 encontrado en posicion");
+		var_dump($key);
+	}
+}
+
+var_dump($title_existing_after[7844]);
+
+var_dump("$title_existing before array_unique");
+var_dump($title_existing_after);
+
+$title_existing_output = array_unique($title_existing_after); //Remove duplicate values ​​from an array
+
+var_dump("$title_existing after array_unique");
+var_dump($title_existing_output);
+
+//2 method
+
+var_dump("2 method input");
+var_dump($title_existing_after);
+
+$res2 = array(); 
+foreach($title_existing_after as $key=>$val) {    
+    $res2[$val] = true; 
+} 
+$res2 = array_keys($res2); 
+
+var_dump("2 method output");
+var_dump($res2);
+
+foreach ($res2 as $key => $value) {
+	if ($value == "MLM739753599")
+	{
+		var_dump("MLM739753599 encontrado en posicion");
+		var_dump($key);
+	}
+}
+
 $array_to_compare_example = array($item_1, $item_2, $item_3, $item_4, $item_5, /*$item_6*/);
 
 //$array_indexed_to_compare_example = array('0' => $item_1, '1' => $item_2, '2' => $item_3);
@@ -97,15 +171,15 @@ $array_to_compare_example = array($item_1, $item_2, $item_3, $item_4, $item_5, /
 //get_ranking_item($item_id_array, $category_id, $limit = 50, $country_id = "MLM")
 
 
-$object_array = $meli -> get_full_article_array($array_null_why2);
+//$object_array = $meli -> get_full_article_array($array_null_why2);
+
 //$ranking = $meli -> get_ranking_item($item_1, $limit = 50);
 //var_dump($ranking);
 //var_dump($object_array);
 
-$ranking_array = $meli -> get_ranking_item_array($object_array, $limit = 50, $country_id = "MLB");
+//$ranking_array = $meli -> get_ranking_item_array($object_array, $limit = 50, $country_id = "MLM");
 
-var_dump($ranking_array);
-
+//var_dump($ranking_array);
 
 // Testeo items post creation.
 /*
