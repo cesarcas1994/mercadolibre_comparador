@@ -83,8 +83,8 @@ ini_set('max_execution_time', 0); //unlimited
 
 //  *  // new method
 
-$min_children_category = 4;
-$max_children_category = 5;
+$min_children_category = 6;
+$max_children_category = 7;
 
 $start_time = microtime(true);
 
@@ -94,5 +94,6 @@ $meli -> get_items_features_unified_v2($min_children_category, $max_children_cat
 
 $end_time = microtime(true);
 
-echo "<br> indirect call - data extractor moder - time rounded: " . round($end_time - $start_time, 6) . " seconds";
+echo "<br> indirect call - data extractor model - time rounded: " . round($end_time - $start_time, 6) . " seconds";
+echo "Total items - data extractor model: " . $cousin_and_total_items["total_items"];
 echo "<br>download speed : " . round($cousin_and_total_items["total_items"]/($end_time - $start_time), 4) . " art/seconds";

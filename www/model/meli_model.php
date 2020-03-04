@@ -198,7 +198,7 @@ class Meli
     public function get_item_time_active_array($time_created_array, $time_parameter, $healt_array){
 
       var_dump($time_created_array);
-      var_dump($healt_array);
+      //var_dump($healt_array);
 
       $today_time_array_format = analysis::today($exact_time = true);
       $today_time = $today_time_array_format['year'] . "-" . $today_time_array_format['mon'] . "-" . $today_time_array_format['mday'];
@@ -228,7 +228,7 @@ class Meli
       }
 
       var_dump("get_item_time_active_array");
-      var_dump($item_time_active_array);
+      //var_dump($item_time_active_array);
 
       return $item_time_active_array;
 
@@ -236,8 +236,8 @@ class Meli
 
     public function get_item_time_active_array_azure($time_created_array, $time_parameter, $healt_array, $url_azure_cloud){
 
-      var_dump($time_created_array);
-      var_dump($healt_array);
+      //var_dump($time_created_array);
+      //var_dump($healt_array);
 
       foreach ($time_created_array as $key) {
           $url_array[] = $url_azure_cloud . "&time=" . $key . "&time_parameter=" . $time_parameter;
@@ -251,7 +251,7 @@ class Meli
       }
 
       var_dump("get_item_time_active_array");
-      var_dump($obj);
+      //var_dump($obj);
 
       return $obj;
 
@@ -290,10 +290,10 @@ class Meli
         }
       }
       var_dump("sold_quantity_array");
-      var_dump($sold_quantity_array);
+      //var_dump($sold_quantity_array);
 
       var_dump("permalinks_array");
-      var_dump($permalinks_array);
+      //var_dump($permalinks_array);
 
       if ($permalinks_array != null) {
         
@@ -525,12 +525,12 @@ class Meli
           //sold_quantity
             $sold_quantity_array = $this -> get_sold_quantity_array($object_array, $url_azure_cloud = "https://tablesoldquantity.azurewebsites.net/api/ScrapingHTTP?code=9TtiE9aIhq1apfSMbolmwZZgXOcyBXYFos0Zdn1zga2v/gaddrDBqw==");
             var_dump('sold_quantity_array');
-            var_dump($sold_quantity_array);
+            //var_dump($sold_quantity_array);
 
           //views
             $views_array = analysis::total_item_visions_array($item_ids_array);
             var_dump('views_array');
-            var_dump($views_array);
+           // var_dump($views_array);
 
         foreach ($object_array as $key => $value) {
           if ($sold_quantity_array[$key] === null) {
@@ -620,7 +620,7 @@ class Meli
          } 
 
       var_dump("attributes");  
-      var_dump($attributes_array);    
+      //var_dump($attributes_array);    
 
       // reviews stars
 
@@ -713,7 +713,7 @@ class Meli
         if ($sold_quantity_array === null) {
           $sold_quantity_array = $this -> get_sold_quantity_array($object_array, $url_azure_cloud = "https://tablesoldquantity.azurewebsites.net/api/ScrapingHTTP?code=9TtiE9aIhq1apfSMbolmwZZgXOcyBXYFos0Zdn1zga2v/gaddrDBqw==");
           var_dump('sold_quantity_array');
-          var_dump($sold_quantity_array);
+          //var_dump($sold_quantity_array);
         }
 
       foreach ($object_array as $key => $value) {
@@ -1113,8 +1113,8 @@ class Meli
         $total_articles = $obj["paging"]["total"];
       }
 
-      var_dump("total articles");
-      var_dump($total_articles);
+      //var_dump("total articles");
+      //var_dump($total_articles);
 
       if ($total_articles <= 1000) {        
 
@@ -1136,8 +1136,8 @@ class Meli
 
         $total_items_category = $this -> get_real_articles_array_country($category_array, $country_id);
 
-        var_dump("total_items_category");
-        var_dump(count($total_items_category));
+        //var_dump("total_items_category");
+        //var_dump(count($total_items_category));
         //var_dump($total_items_category[0]);    
        
       }
@@ -1166,8 +1166,8 @@ class Meli
               }              
             }
 
-            var_dump("category_array");
-            var_dump($category_array);
+            //var_dump("category_array");
+            //var_dump($category_array);
 
             $total_items_category_groups = $this -> get_real_articles_array_country($category_array, $country_id);
 
@@ -1180,14 +1180,14 @@ class Meli
               $total_items_category = $total_items_category_groups;
             }
 
-            var_dump(count($total_items_category));
+            //var_dump(count($total_items_category));
             //var_dump($total_items_category);
 
             unset($category_array);
         }
 
-        var_dump("total items found");
-        var_dump($total_items_category);
+        //var_dump("total items found");
+        //var_dump($total_items_category);
 
         if($force_calculation_under_1000 == true){
 
@@ -1211,16 +1211,16 @@ class Meli
             }
           }
 
-          var_dump("rand keys selected");
-          var_dump($test_rand);
+          //var_dump("rand keys selected");
+          //var_dump($test_rand);
 
           //var_dump("final rand output before array_unique");
           //var_dump($total_items_category);
 
           //$total_items_category = array_unique($total_items_category);
 
-          var_dump("final rand output after array_unique");
-          var_dump($total_items_category);
+          //var_dump("final rand output after array_unique");
+          //var_dump($total_items_category);
         }
 
 
@@ -1245,8 +1245,8 @@ class Meli
       }
 
       
-      var_dump("categorys_existing before array_unique");
-      var_dump($categorys_existing);
+      //var_dump("categorys_existing before array_unique");
+      //var_dump($categorys_existing);
 
       $categorys_existing = array_unique($categorys_existing); //Remove duplicate values ​​from an array
 
@@ -1259,8 +1259,8 @@ class Meli
       unset( $categorys_existing);
       $categorys_existing = $step;
 
-      var_dump("categorys_existing  after array_unique");
-      var_dump($categorys_existing);
+      //var_dump("categorys_existing  after array_unique");
+     // var_dump($categorys_existing);
 
       // form $item_id_array for every category existing
 
@@ -1275,20 +1275,20 @@ class Meli
       // send all item_id_array to get_ranking_item
       $ranking_array = [];
       foreach ($categorys_existing as $key => $value_category) {
-        var_dump("array_category_items entrada");
-        var_dump($array_category_items[$key]);
-        var_dump("categorys_existing entrada");
-        var_dump($categorys_existing[$key]);
+        //var_dump("array_category_items entrada");
+        //var_dump($array_category_items[$key]);
+        //var_dump("categorys_existing entrada");
+        //var_dump($categorys_existing[$key]);
         $obj = $this -> get_ranking_item($array_category_items[$key], $categorys_existing[$key], $limit = 50, $country_id);
         //$ranking_array = array_merge($ranking_array, $obj);
         $ranking_array = $ranking_array + $obj;
-        var_dump("ranking_array");
-        var_dump($ranking_array);
+        //var_dump("ranking_array");
+        //var_dump($ranking_array);
       }
 
       ksort($ranking_array);
-      var_dump("ksort");
-      var_dump($ranking_array); 
+      //var_dump("ksort");
+      //var_dump($ranking_array); 
 
       return $ranking_array;
     }
@@ -1332,13 +1332,13 @@ class Meli
             $item_array_to_search_bigger1000[$key_undone] = $item_id_array[$key_undone];       
           }
 
-          var_dump("test subtract item arrays");
-          var_dump($item_array_to_search_bigger1000);
+          //var_dump("test subtract item arrays");
+          //var_dump($item_array_to_search_bigger1000);
 
           $item_groups = $this -> get_ranking_item_groups($total_articles, $category_id,  $offset_group = 1000, $country_id);
 
-          var_dump("get_ranking_item_groups");
-          var_dump($item_groups);
+          //var_dump("get_ranking_item_groups");
+          //var_dump($item_groups);
           
           $total_known_offset = 0;
           $token_negative_offset = false;
@@ -1412,12 +1412,12 @@ class Meli
             }               
           }
 
-          var_dump("before known_offset");
-          var_dump($known_offset);
-          var_dump("known_offset all sum before complete_known_offset");
-          var_dump($total_known_offset);
-          var_dump("count ranking_position_less1000 all");
-          var_dump(count($ranking_position_less1000["all"]));
+          //var_dump("before known_offset");
+          //var_dump($known_offset);
+          //var_dump("known_offset all sum before complete_known_offset");
+          //var_dump($total_known_offset);
+          //var_dump("count ranking_position_less1000 all");
+          //var_dump(count($ranking_position_less1000["all"]));
 
           if ($token_negative_offset == true) {
              $known_offset = $this -> complete_known_offset($known_offset, $item_groups["quantity_array"], $total_known_offset, count($ranking_position_less1000["all"]));
@@ -1428,19 +1428,19 @@ class Meli
             $total_known_offset_after_complete_known_offset = $total_known_offset_after_complete_known_offset + $known_offset[$key];
           }        
          
-          var_dump("known_offset all sum after complete_known_offset");
-          var_dump($total_known_offset_after_complete_known_offset);
-          var_dump("after complete known_offset");
-          var_dump($known_offset);
-          var_dump("groups_ranking_position");
-          var_dump($groups_ranking_position);
+          //var_dump("known_offset all sum after complete_known_offset");
+          //var_dump($total_known_offset_after_complete_known_offset);
+          //var_dump("after complete known_offset");
+          //var_dump($known_offset);
+          //var_dump("groups_ranking_position");
+          //var_dump($groups_ranking_position);
 
           $ranking_position_higher1000 = $this -> get_ranking_item_higher1000($known_offset, $item_groups["quantity_array"], $groups_ranking_position);
           
-          var_dump("ranking_position_less1000");
-          var_dump($ranking_position_less1000["know"]);
-          var_dump('ranking_position_higher1000');
-          var_dump($ranking_position_higher1000);
+          //var_dump("ranking_position_less1000");
+          //var_dump($ranking_position_less1000["know"]);
+          //var_dump('ranking_position_higher1000');
+          //var_dump($ranking_position_higher1000);
 
           if($ranking_position_less1000["know"] != null){
              if ($ranking_position_higher1000 == null) { 
@@ -1453,8 +1453,8 @@ class Meli
             $ranking_position = $ranking_position_higher1000;
           }
           
-          var_dump('ranking_position');
-          var_dump($ranking_position);
+          //var_dump('ranking_position');
+          //var_dump($ranking_position);
         }
             
         // null result equal to empty string to machine learning understanding 
@@ -1506,8 +1506,8 @@ class Meli
         }
       }
 
-      var_dump('Final ranking_position');
-      var_dump($ranking_position);
+      //var_dump('Final ranking_position');
+      //var_dump($ranking_position);
 
       return $ranking_position;
     }
@@ -1517,11 +1517,11 @@ class Meli
 
         //Pendiente esta funcion se le tiene que modificar la busqueda por items , problema devuelve array no mayor a 50 size
 
-         var_dump(" get_ranking_item_less1000 item_id_array input");
-         var_dump($item_id_array);
+         //var_dump(" get_ranking_item_less1000 item_id_array input");
+         //var_dump($item_id_array);
 
-         var_dump("get_ranking_item_less1000 total_articles");
-         var_dump($total_articles);
+         //var_dump("get_ranking_item_less1000 total_articles");
+         //var_dump($total_articles);
           
         for ($j=1;  $j <= ceil($total_articles / $limit); $j++)
         {
@@ -1547,8 +1547,8 @@ class Meli
           
           $ranking_position["all"] = $total_items_category;
           
-          var_dump("get_ranking_item_less1000 ranking_position[all]");
-          var_dump(count($ranking_position["all"]));
+          //var_dump("get_ranking_item_less1000 ranking_position[all]");
+          //var_dump(count($ranking_position["all"]));
           //var_dump($ranking_position["all"]);         
         }
         else{
@@ -1587,13 +1587,13 @@ class Meli
             $lost_item[$item_position + 1] = $obj;
           }
           if (count($ranking_position) == count($item_id_array)) {
-            var_dump("check if the search is all complete, to save memory");
+            //var_dump("check if the search is all complete, to save memory");
             break;
           }                            
         }
 
-        var_dump("lost items");
-        var_dump($lost_item);
+        //var_dump("lost items");
+        //var_dump($lost_item);
 
         //end!
         /* 
@@ -1628,9 +1628,9 @@ class Meli
         */
 
         if ($option_big_1000 == true){
-          var_dump("item_less1000 that were found");
-          var_dump(count($ranking_position["know"]));
-          var_dump($ranking_position["know"]);
+          //var_dump("item_less1000 that were found");
+          //var_dump(count($ranking_position["know"]));
+          //var_dump($ranking_position["know"]);
         }      
 
         return $ranking_position;    
@@ -1686,7 +1686,7 @@ class Meli
 
       $start_time = microtime(true);
 
-      var_dump("init get_ranking_item_groups");
+      //var_dump("init get_ranking_item_groups");
 
       $min_max_price = $this -> groups_maker(0, $total_articles, $total_articles, $add_max_infinite = true); //assume (max_init = $total_articles);
 
@@ -1695,7 +1695,7 @@ class Meli
         $category_array[] = $category_id . "&limit=1" . "&offset=0" . "&price=" . $min_max_price[$key]["min"] . "-" . $min_max_price[$key]["max"]; 
       }
 
-      var_dump($category_array);   
+      //var_dump($category_array);   
 
       $total_items_category = $this -> get_articles_array_country($category_array, $country_id);
 
@@ -1703,7 +1703,7 @@ class Meli
         $quantity_array[$key] = $total_items_category[$key]["paging"]["total"];
       }
 
-      var_dump($quantity_array);
+      //var_dump($quantity_array);
 
       // unified and separate until all quantity_array elements are < $offset_group (Commonly 1000)
        $count_cycle = 0;
@@ -1716,14 +1716,14 @@ class Meli
         if ($quantity_array[$key] > 1000) {
           $groups_maker_unified = $this -> groups_maker_unified($quantity_array, $min_max_price, $groups_max_size = 1000);
 
-          var_dump($groups_maker_unified);
+          //var_dump($groups_maker_unified);
 
           $groups_maker_separate = $this -> groups_maker_separate($groups_maker_unified["quantity_array"]
           , $groups_maker_unified["min_max_price"], $groups_max_size = 1000, $category_id, $country_id);
 
           //Pendiente crear salida de esta funcion cuando resta en pesos (333 y 330.1) diferencia de 0.1
 
-          var_dump($groups_maker_separate);
+          //var_dump($groups_maker_separate);
 
           $quantity_array = $groups_maker_separate["quantity_array"];
           $min_max_price =  $groups_maker_separate["min_max_price"];
@@ -1733,8 +1733,8 @@ class Meli
           $key = 0;
           $count_cycle = $count_cycle + 1; 
 
-          var_dump("count_cycle no more than 10");
-          var_dump($count_cycle);
+          //var_dump("count_cycle no more than 10");
+          //var_dump($count_cycle);
 
           if ($count_cycle < 10){
             goto repeat_unified_and_separate;
@@ -1754,9 +1754,9 @@ class Meli
       $quantity_array = $groups_maker_unified["quantity_array"];
       $min_max_price = $groups_maker_unified["min_max_price"];
 
-      var_dump("Final group formation");
-      var_dump($quantity_array);
-      var_dump($min_max_price);
+      //var_dump("Final group formation");
+      //var_dump($quantity_array);
+      //var_dump($min_max_price);
 
       //Revisar suma "No match!" that s strange
       $sum = 0;
@@ -1764,8 +1764,8 @@ class Meli
         $sum = $sum + $quantity_array[$key];
       }
 
-      var_dump("sum all elements");
-      var_dump($sum);
+      //var_dump("sum all elements");
+      //var_dump($sum);
 
       $item_groups =  $groups_maker_unified;
 
@@ -1821,8 +1821,8 @@ class Meli
 
             $min_max_price_separate = $this -> groups_maker($min_max_price_work[$key]["min"], $min_max_price_work[$key]["max"], $quantity_array_work[$key], $add_max_infinite = true);
 
-            var_dump("min_max_price_separate add_max_infinite = true");
-            var_dump($min_max_price_separate);
+            //var_dump("min_max_price_separate add_max_infinite = true");
+            //var_dump($min_max_price_separate);
           }
           else{
             //common case
@@ -1856,7 +1856,7 @@ class Meli
         $category_array[] = $category_id . "&limit=1" . "&offset=0" . "&price=" . $min_max_price_cleaned[$key]["min"] . "-" . $min_max_price_cleaned[$key]["max"]; 
       }
 
-      var_dump($category_array);   
+      //var_dump($category_array);   
 
       $total_items_category = $this -> get_articles_array_country($category_array, $country_id);
 
@@ -2024,8 +2024,8 @@ class Meli
         }
         // MLB need to be traduce to portuguese
         $item_title_pt_array = analysis::traduce_to_pt_v2($item_title_array);
-        var_dump("testing portuguesse");
-        var_dump($item_title_pt_array);
+        //var_dump("testing portuguesse");
+        //var_dump($item_title_pt_array);
 
       //get all cousin categories id //
 
@@ -2264,7 +2264,7 @@ class Meli
           return "just $country_base for MLM mexico";
         }
 
-        var_dump($children_categories);
+        //var_dump($children_categories);
 
         $step = 0;
         for ($j = $min_children_category;  $j <= $max_children_category; $j++){
@@ -2413,7 +2413,7 @@ class Meli
       //$body = $meli -> load_json("predictorMachineLearning/MLM1077features_predictor.json");
 
       var_dump("antes de json_encode");
-      var_dump($body);
+      //var_dump($body);
       //var_dump(typeof($body));
 
       $body = json_encode($body);
@@ -2443,7 +2443,7 @@ class Meli
         }
 
       var_dump("despues de json_encode");
-      var_dump($body);
+      //var_dump($body);
 
       $CURL_OPTS = array(
         //revisar si es necesario esta linea
