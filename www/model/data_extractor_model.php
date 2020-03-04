@@ -83,8 +83,8 @@ ini_set('max_execution_time', 0); //unlimited
 
 //  *  // new method
 
-$min_children_category = 8;
-$max_children_category = 9;
+$min_children_category = 10;
+$max_children_category = 11;
 
 $start_time = microtime(true);
 

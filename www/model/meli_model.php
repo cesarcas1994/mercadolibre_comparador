@@ -197,7 +197,7 @@ class Meli
 
     public function get_item_time_active_array($time_created_array, $time_parameter, $healt_array){
 
-      var_dump($time_created_array);
+      //var_dump($time_created_array);
       //var_dump($healt_array);
 
       $today_time_array_format = analysis::today($exact_time = true);
@@ -2264,7 +2264,7 @@ class Meli
           return "just $country_base for MLM mexico";
         }
 
-        //var_dump($children_categories);
+        var_dump($children_categories);
 
         $step = 0;
         for ($j = $min_children_category;  $j <= $max_children_category; $j++){
