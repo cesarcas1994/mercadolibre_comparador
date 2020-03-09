@@ -83,17 +83,23 @@ ini_set('max_execution_time', 0); //unlimited
 
 //  *  // new method
 
-$min_children_category = 11;
-$max_children_category = 100;
+$min_children_category = 12;
+$max_children_category = 13;
 
 $start_time = microtime(true);
 
+$meli -> data_extractor_v2($min_children_category, $max_children_category, $plus = null, $force_calculation_under_1000 = true, $country_base = "MLM");
+
+/*
 $cousin_and_total_items = $meli -> comparison_model_prepare_to_getfeatures_v2($min_children_category, $max_children_category, $plus= null, $force_calculation_under_1000 = true, $country_base = "MLM");
 
 $meli -> get_items_features_unified_v2($min_children_category, $max_children_category, $cousin_and_total_items["items_to_get_features"], $cousin_and_total_items["category_cousins"], $country_base = "MLM");
+
 
 $end_time = microtime(true);
 
 echo "<br> indirect call - data extractor model - time rounded: " . round($end_time - $start_time, 6) . " seconds";
 echo "Total items - data extractor model: " . $cousin_and_total_items["total_items"];
 echo "<br>download speed : " . round($cousin_and_total_items["total_items"]/($end_time - $start_time), 4) . " art/seconds";
+
+*/

@@ -2251,6 +2251,28 @@ class Meli
         return $match_ids;
     }
 
+    public function data_extractor_v2($min_children_category, $max_children_category, $plus, $force_calculation_under_1000, $country_base){
+
+      for ($j = $min_children_category;  $j <= $max_children_category; $j++){
+
+        $start_time = microtime(true);
+
+        $min_children_category_iterate = $j;
+        $max_children_category_iterate = $j;
+
+        $cousin_and_total_items = $this -> comparison_model_prepare_to_getfeatures_v2($min_children_category_iterate, $max_children_category_iterate, $plus, $force_calculation_under_1000, $country_base);
+
+        $this -> get_items_features_unified_v2($min_children_category_iterate, $max_children_category_iterate, $cousin_and_total_items["items_to_get_features"], $cousin_and_total_items["category_cousins"], $country_base);
+
+        $end_time = microtime(true);
+
+        echo "<br> indirect call - data extractor model - time rounded: " . round($end_time - $start_time, 6) . " seconds";
+        echo "Total items - data extractor model: " . $cousin_and_total_items["total_items"];
+        echo "<br>download speed : " . round($cousin_and_total_items["total_items"]/($end_time - $start_time), 4) . " art/seconds";
+      }
+
+    }
+
     public function comparison_model_prepare_to_getfeatures_v2($min_children_category, $max_children_category, $plus, $force_calculation_under_1000, $country_base){
 
       $start_time = microtime(true);
